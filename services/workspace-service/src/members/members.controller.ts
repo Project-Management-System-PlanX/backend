@@ -1,17 +1,9 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Body,
-    Patch,
-    Param,
-    Delete,
-} from '@nestjs/common';
-import { MembersService } from './members.service';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import type { MembersService } from './members.service';
 
 @Controller('workspaces/:workspaceId/members')
 export class MembersController {
-    constructor(private readonly membersService: MembersService) { }
+    constructor(private readonly membersService: MembersService) {}
 
     @Post()
     addMember(
@@ -36,10 +28,7 @@ export class MembersController {
     }
 
     @Delete(':userId')
-    removeMember(
-        @Param('workspaceId') workspaceId: string,
-        @Param('userId') userId: string,
-    ) {
+    removeMember(@Param('workspaceId') workspaceId: string, @Param('userId') userId: string) {
         return this.membersService.removeMember(workspaceId, userId);
     }
 }

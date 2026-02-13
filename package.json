@@ -16,11 +16,23 @@
     "db:migrate": "npm run prisma:migrate --workspace=services/workspace-service",
     "db:generate": "npm run prisma:generate --workspace=services/workspace-service",
     "db:studio": "npm run prisma:studio --workspace=services/workspace-service",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check --write .",
+    "prepare": "husky",
     "clean": "rm -rf node_modules services/*/node_modules services/*/dist shared/*/node_modules"
   },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
+  },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.15",
     "@types/node": "^20.11.5",
     "concurrently": "^8.2.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "typescript": "^5.3.3"
   },
   "engines": {

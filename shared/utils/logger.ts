@@ -7,23 +7,23 @@ export class Logger {
         this.logger = new NestLogger(context);
     }
 
-    log(message: string, ...args: any[]) {
+    log(message: string, ...args: unknown[]) {
         this.logger.log(message, ...args);
     }
 
-    error(message: string, trace?: string, ...args: any[]) {
+    error(message: string, trace?: string, ...args: unknown[]) {
         this.logger.error(message, trace, ...args);
     }
 
-    warn(message: string, ...args: any[]) {
+    warn(message: string, ...args: unknown[]) {
         this.logger.warn(message, ...args);
     }
 
-    debug(message: string, ...args: any[]) {
+    debug(message: string, ...args: unknown[]) {
         this.logger.debug(message, ...args);
     }
 
-    verbose(message: string, ...args: any[]) {
+    verbose(message: string, ...args: unknown[]) {
         this.logger.verbose(message, ...args);
     }
 }

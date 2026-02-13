@@ -1,5 +1,5 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { createClient, RedisClientType } from 'redis';
+import { Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { createClient, type RedisClientType } from 'redis';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
@@ -71,7 +71,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Cache helpers
-    async cacheSet(key: string, value: any, ttl: number = 3600): Promise<void> {
+    async cacheSet(key: string, value: unknown, ttl: number = 3600): Promise<void> {
         await this.set(key, JSON.stringify(value), ttl);
     }
 

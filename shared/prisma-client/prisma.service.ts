@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
@@ -30,10 +30,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
         return Promise.all(
             models.map((modelKey) => {
-                const model = this[modelKey as any];
+                const model = this[modelKey as keyof this];
                 if (model && typeof model.deleteMany === 'function') {
                     return model.deleteMany();
                 }
+                return Promise.resolve();
             }),
         );
     }

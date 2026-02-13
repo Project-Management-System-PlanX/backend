@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { WorkspacesModule } from './workspaces/workspaces.module';
 import { ChannelsModule } from './channels/channels.module';
 import { GroupsModule } from './groups/groups.module';
 import { MembersModule } from './members/members.module';
+import { WorkspacesModule } from './workspaces/workspaces.module';
 
 @Module({
     imports: [
@@ -16,4 +16,4 @@ import { MembersModule } from './members/members.module';
         MembersModule,
     ],
 })
-export class AppModule { }
+export class AppModule {}

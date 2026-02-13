@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { CreateGroupDto } from './dto/create-group.dto';
+import type { CreateGroupDto } from './dto/create-group.dto';
 
 @Injectable()
 export class GroupsService {
@@ -43,7 +43,7 @@ export class GroupsService {
                 where: { id },
                 data: updateData,
             });
-        } catch (error) {
+        } catch (_error) {
             throw new NotFoundException('Group not found');
         }
     }
@@ -53,7 +53,7 @@ export class GroupsService {
             return await this.prisma.group.delete({
                 where: { id },
             });
-        } catch (error) {
+        } catch (_error) {
             throw new NotFoundException('Group not found');
         }
     }

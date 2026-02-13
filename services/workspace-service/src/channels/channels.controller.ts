@@ -1,18 +1,10 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Body,
-    Patch,
-    Param,
-    Delete,
-} from '@nestjs/common';
-import { ChannelsService } from './channels.service';
-import { CreateChannelDto } from './dto/create-channel.dto';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import type { ChannelsService } from './channels.service';
+import type { CreateChannelDto } from './dto/create-channel.dto';
 
 @Controller('channels')
 export class ChannelsController {
-    constructor(private readonly channelsService: ChannelsService) { }
+    constructor(private readonly channelsService: ChannelsService) {}
 
     @Post()
     create(@Body() createChannelDto: CreateChannelDto) {
@@ -48,10 +40,7 @@ export class ChannelsController {
     }
 
     @Delete(':channelId/members/:userId')
-    removeMember(
-        @Param('channelId') channelId: string,
-        @Param('userId') userId: string,
-    ) {
+    removeMember(@Param('channelId') channelId: string, @Param('userId') userId: string) {
         return this.channelsService.removeMember(channelId, userId);
     }
 }

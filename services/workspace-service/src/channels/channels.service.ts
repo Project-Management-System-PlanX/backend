@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { CreateChannelDto } from './dto/create-channel.dto';
+import type { CreateChannelDto } from './dto/create-channel.dto';
 
 @Injectable()
 export class ChannelsService {
@@ -49,7 +49,7 @@ export class ChannelsService {
                 where: { id },
                 data: updateData,
             });
-        } catch (error) {
+        } catch (_error) {
             throw new NotFoundException('Channel not found');
         }
     }
@@ -59,7 +59,7 @@ export class ChannelsService {
             return await this.prisma.channel.delete({
                 where: { id },
             });
-        } catch (error) {
+        } catch (_error) {
             throw new NotFoundException('Channel not found');
         }
     }

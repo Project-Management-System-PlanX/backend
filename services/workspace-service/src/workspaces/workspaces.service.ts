@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { CreateWorkspaceDto } from './dto/create-workspace.dto';
-import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
+import type { CreateWorkspaceDto } from './dto/create-workspace.dto';
+import type { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 
 @Injectable()
 export class WorkspacesService {
@@ -74,7 +74,7 @@ export class WorkspacesService {
                 where: { id },
                 data: updateWorkspaceDto,
             });
-        } catch (error) {
+        } catch (_error) {
             throw new NotFoundException('Workspace not found');
         }
     }
@@ -84,7 +84,7 @@ export class WorkspacesService {
             return await this.prisma.workspace.delete({
                 where: { id },
             });
-        } catch (error) {
+        } catch (_error) {
             throw new NotFoundException('Workspace not found');
         }
     }
