@@ -12,6 +12,8 @@
     "dev:workspace": "npm run start:dev --workspace=services/workspace-service",
     "dev:websocket": "npm run start:dev --workspace=services/websocket-hub",
     "dev:all": "concurrently \"npm run dev:workspace\" \"npm run dev:websocket\"",
+    "start:workspace": "npm run start:prod --workspace=services/workspace-service",
+    "start:websocket": "npm run start:prod --workspace=services/websocket-hub",
     "build:all": "npm run build --workspaces",
     "db:migrate": "npm run prisma:migrate --workspace=services/workspace-service",
     "db:generate": "npm run prisma:generate --workspace=services/workspace-service",
