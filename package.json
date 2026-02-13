@@ -1,0 +1,30 @@
+{
+  "name": "teamup-backend",
+  "version": "1.0.0",
+  "description": "TeamUp Microservices Backend",
+  "private": true,
+  "workspaces": [
+    "services/*",
+    "shared/*"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm install --workspaces",
+    "dev:workspace": "npm run start:dev --workspace=services/workspace-service",
+    "dev:websocket": "npm run start:dev --workspace=services/websocket-hub",
+    "dev:all": "concurrently \"npm run dev:workspace\" \"npm run dev:websocket\"",
+    "build:all": "npm run build --workspaces",
+    "db:migrate": "npm run prisma:migrate --workspace=services/workspace-service",
+    "db:generate": "npm run prisma:generate --workspace=services/workspace-service",
+    "db:studio": "npm run prisma:studio --workspace=services/workspace-service",
+    "clean": "rm -rf node_modules services/*/node_modules services/*/dist shared/*/node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
