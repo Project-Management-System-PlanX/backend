@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
-import type { CreateGroupDto } from './dto/create-group.dto';
-import type { GroupsService } from './groups.service';
+import { CreateGroupDto } from './dto/create-group.dto';
+import { GroupsService } from './groups.service';
 
 @Controller('groups')
 export class GroupsController {

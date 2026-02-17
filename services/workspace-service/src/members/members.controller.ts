@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
-import type { MembersService } from './members.service';
+import { MembersService } from './members.service';
 
 @Controller('workspaces/:workspaceId/members')
 export class MembersController {

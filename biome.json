@@ -11,7 +11,7 @@
       },
       "style": {
         "noNonNullAssertion": "off",
-        "useImportType": "warn",
+        "useImportType": "off",
         "noParameterAssign": "warn"
       },
       "suspicious": {
