@@ -455,24 +455,9 @@ kill -9 <PID>
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 👥 Team
-
-- **Project Lead:** [Your Name]
-- **Backend Team:** [Team Members]
-- **Frontend Team:** [Team Members]
-
----
-
 ## 🔗 Related Repositories
 
 - **Frontend:** [teamup-frontend](https://github.com/Project-Management-System-PlanX/frontend)
-- **Mobile:** [teamup-mobile](https://github.com/Project-Management-System-PlanX/mobile) *(coming soon)*
 
 ---
 
