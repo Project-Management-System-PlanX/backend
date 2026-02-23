@@ -7,18 +7,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Workspace {
-  id          String   @id @default(uuid())
-  name        String
-  slug        String   @unique
-  ownerId     String
-  avatar      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// User profile — synced from Clerk on first login and kept up-to-date
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique // Clerk's user_xxx ID (the JWT sub claim)
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  username  String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  members     WorkspaceMember[]
-  channels    Channel[]
-  
+  @@map("users")
+}
+
+model Workspace {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  ownerId   String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members  WorkspaceMember[]
+  channels Channel[]
+
   @@map("workspaces")
 }
 
@@ -29,7 +44,7 @@ model WorkspaceMember {
   role        String   @default("MEMBER")
   joinedAt    DateTime @default(now())
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
   @@map("workspace_members")
@@ -44,9 +59,9 @@ model Channel {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  members     ChannelMember[]
-  groups      Group[]
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members   ChannelMember[]
+  groups    Group[]
 
   @@map("channels")
 }
@@ -58,7 +73,7 @@ model ChannelMember {
   role      String   @default("MEMBER")
   joinedAt  DateTime @default(now())
 
-  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   @@unique([channelId, userId])
   @@map("channel_members")
@@ -72,8 +87,8 @@ model Group {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  channel     Channel       @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  members     GroupMember[]
+  channel Channel       @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  members GroupMember[]
 
   @@map("groups")
 }
@@ -84,7 +99,7 @@ model GroupMember {
   userId   String
   joinedAt DateTime @default(now())
 
-  group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, userId])
   @@map("group_members")

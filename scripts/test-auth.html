@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PlanX — Get Bearer Token</title>
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_aGVscGZ1bC1iZW5nYWwtNzkuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://helpful-bengal-79.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+    type="text/javascript"
+  ></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f13;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      background: #1a1a2e;
+      border: 1px solid #2d2d44;
+      border-radius: 16px;
+      padding: 2.5rem;
+      max-width: 680px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    h1 { font-size: 1.5rem; color: #a78bfa; margin-bottom: 0.4rem; }
+    .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 2rem; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: #7c3aed; color: white; border: none;
+      padding: 0.75rem 1.5rem; border-radius: 8px;
+      font-size: 0.95rem; cursor: pointer; transition: background 0.2s;
+    }
+    .btn:hover { background: #6d28d9; }
+    .btn.secondary { background: #1e293b; border: 1px solid #334155; }
+    .btn.secondary:hover { background: #273649; }
+    .btn.copy { background: #064e3b; border: 1px solid #10b981; font-size: 0.8rem; padding: 0.4rem 0.8rem; }
+    .btn.copy:hover { background: #065f46; }
+    .section { margin-top: 1.5rem; }
+    .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 0.5rem; }
+    .token-box {
+      background: #0d1117; border: 1px solid #30363d;
+      border-radius: 8px; padding: 1rem;
+      font-family: 'Monaco', 'Menlo', monospace; font-size: 0.78rem;
+      color: #4ade80; word-break: break-all; line-height: 1.6;
+      position: relative;
+    }
+    .curl-box {
+      background: #0d1117; border: 1px solid #30363d;
+      border-radius: 8px; padding: 1rem;
+      font-family: 'Monaco', 'Menlo', monospace; font-size: 0.75rem;
+      color: #93c5fd; white-space: pre-wrap; line-height: 1.6;
+    }
+    .row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+    .badge {
+      display: inline-block; background: #14532d; color: #4ade80;
+      border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.7rem;
+    }
+    .user-info { 
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 8px; padding: 0.75rem 1rem;
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .user-info img { width: 36px; height: 36px; border-radius: 50%; }
+    .user-info .name { font-weight: 600; font-size: 0.9rem; }
+    .user-info .uid { font-size: 0.75rem; color: #64748b; font-family: monospace; }
+    #sign-in-area { text-align: center; padding: 1rem 0; }
+    #token-area { display: none; }
+    .expiry { font-size: 0.8rem; color: #64748b; margin-top: 0.5rem; }
+    .refresh-note { font-size: 0.78rem; color: #f59e0b; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔑 Bearer Token Generator</h1>
+    <p class="subtitle">PlanX backend testing tool — sign in to get your Clerk JWT</p>
+
+    <div id="sign-in-area">
+      <p style="color:#64748b; margin-bottom:1.5rem;">Sign in with your Clerk account to get your Bearer token for backend testing.</p>
+      <button class="btn" onclick="signIn()">Sign In with Clerk</button>
+    </div>
+
+    <div id="token-area">
+      <div id="user-info-box" class="user-info"></div>
+
+      <div class="section">
+        <div class="row">
+          <span class="label">Bearer Token</span>
+          <span class="badge">✓ Valid JWT</span>
+          <button class="btn copy" onclick="copyToken()">Copy</button>
+        </div>
+        <div class="token-box" id="token-display">Loading...</div>
+        <div class="expiry" id="expiry-display"></div>
+        <div class="refresh-note" id="refresh-note" style="display:none">⟳ Tokens expire in ~1h. Click Refresh to get a new one.</div>
+      </div>
+
+      <div class="section">
+        <div class="row">
+          <span class="label">curl Commands</span>
+          <button class="btn copy" onclick="copyCurl()">Copy All</button>
+        </div>
+        <div class="curl-box" id="curl-display"></div>
+      </div>
+
+      <div class="section" style="margin-top:1.5rem; display:flex; gap:1rem;">
+        <button class="btn secondary" onclick="refreshToken()">⟳ Refresh Token</button>
+        <button class="btn secondary" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BASE_URL = 'http://localhost:3002';
+    let currentToken = '';
+
+    window.addEventListener('load', async () => {
+      await window.Clerk.load();
+      const user = window.Clerk.user;
+      if (user) {
+        await showTokenArea(user);
+      }
+    });
+
+    async function signIn() {
+      await window.Clerk.openSignIn({
+        afterSignInUrl: window.location.href,
+        afterSignUpUrl: window.location.href,
+      });
+    }
+
+    async function signOut() {
+      await window.Clerk.signOut();
+      document.getElementById('sign-in-area').style.display = 'block';
+      document.getElementById('token-area').style.display = 'none';
+    }
+
+    async function showTokenArea(user) {
+      document.getElementById('sign-in-area').style.display = 'none';
+      document.getElementById('token-area').style.display = 'block';
+
+      // User info
+      const img = user.imageUrl ? `<img src="${user.imageUrl}" alt="avatar"/>` : '';
+      document.getElementById('user-info-box').innerHTML = `
+        ${img}
+        <div>
+          <div class="name">${user.fullName || user.username || 'User'}</div>
+          <div class="uid">${user.id}</div>
+        </div>
+      `;
+
+      await refreshToken();
+    }
+
+    async function refreshToken() {
+      const session = window.Clerk.session;
+      if (!session) return;
+      const token = await session.getToken();
+      currentToken = token;
+
+      document.getElementById('token-display').textContent = token;
+      document.getElementById('refresh-note').style.display = 'block';
+
+      const curlCmds = `# Set your token (valid ~1 hour)
+export TOKEN="${token}"
+
+# List my workspaces
+curl -s -H "Authorization: Bearer $TOKEN" \\
+  ${BASE_URL}/workspaces | python3 -m json.tool
+
+# Create a workspace
+curl -s -X POST ${BASE_URL}/workspaces \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name": "My Team", "slug": "my-team"}' | python3 -m json.tool
+
+# Get members of a workspace (replace WORKSPACE_ID)
+curl -s -H "Authorization: Bearer $TOKEN" \\
+  ${BASE_URL}/workspaces/WORKSPACE_ID/members | python3 -m json.tool
+
+# Create a channel inside a workspace (replace WORKSPACE_ID)
+curl -s -X POST ${BASE_URL}/channels \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"workspaceId": "WORKSPACE_ID", "name": "general", "type": "PUBLIC"}' | python3 -m json.tool`;
+
+      document.getElementById('curl-display').textContent = curlCmds;
+    }
+
+    function copyToken() {
+      navigator.clipboard.writeText(currentToken);
+      const btn = event.target;
+      btn.textContent = 'Copied ✓';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
+    }
+
+    function copyCurl() {
+      navigator.clipboard.writeText(document.getElementById('curl-display').textContent);
+      const btn = event.target;
+      btn.textContent = 'Copied ✓';
+      setTimeout(() => btn.textContent = 'Copy All', 2000);
+    }
+  </script>
+</body>
+</html>

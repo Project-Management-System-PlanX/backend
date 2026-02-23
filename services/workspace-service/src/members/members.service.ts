@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
@@ -26,7 +26,15 @@ export class MembersService {
         });
     }
 
-    async updateRole(workspaceId: string, userId: string, role: string) {
+    async updateRole(workspaceId: string, userId: string, role: string, requesterId: string) {
+        // Only OWNER/ADMIN can update roles
+        const requester = await this.prisma.workspaceMember.findFirst({
+            where: { workspaceId, userId: requesterId },
+        });
+        if (!requester || !['OWNER', 'ADMIN'].includes(requester.role)) {
+            throw new ForbiddenException('Insufficient permissions to update member role');
+        }
+
         const member = await this.prisma.workspaceMember.findFirst({
             where: { workspaceId, userId },
         });
@@ -41,12 +49,23 @@ export class MembersService {
         });
     }
 
-    async removeMember(workspaceId: string, userId: string) {
+    async removeMember(workspaceId: string, userId: string, requesterId: string) {
+        // Members can remove themselves; OWNER/ADMIN can remove anyone
+        const requester = await this.prisma.workspaceMember.findFirst({
+            where: { workspaceId, userId: requesterId },
+        });
+
+        if (!requester) throw new NotFoundException('Requester is not a workspace member');
+
+        const isSelf = requesterId === userId;
+        const hasPermission = isSelf || ['OWNER', 'ADMIN'].includes(requester.role);
+
+        if (!hasPermission) {
+            throw new ForbiddenException('Insufficient permissions to remove this member');
+        }
+
         return this.prisma.workspaceMember.deleteMany({
-            where: {
-                workspaceId,
-                userId,
-            },
+            where: { workspaceId, userId },
         });
     }
 }

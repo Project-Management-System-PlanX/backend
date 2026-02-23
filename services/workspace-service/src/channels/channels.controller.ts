@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { ChannelsService } from './channels.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 
@@ -7,8 +8,8 @@ export class ChannelsController {
     constructor(private readonly channelsService: ChannelsService) {}
 
     @Post()
-    create(@Body() createChannelDto: CreateChannelDto) {
-        return this.channelsService.create(createChannelDto);
+    create(@CurrentUser('userId') userId: string, @Body() createChannelDto: CreateChannelDto) {
+        return this.channelsService.create(createChannelDto, userId);
     }
 
     @Get('workspace/:workspaceId')
@@ -22,13 +23,17 @@ export class ChannelsController {
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() updateData: Partial<CreateChannelDto>) {
-        return this.channelsService.update(id, updateData);
+    update(
+        @Param('id') id: string,
+        @CurrentUser('userId') userId: string,
+        @Body() updateData: Partial<CreateChannelDto>,
+    ) {
+        return this.channelsService.update(id, updateData, userId);
     }
 
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.channelsService.remove(id);
+    remove(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+        return this.channelsService.remove(id, userId);
     }
 
     @Post(':channelId/members')

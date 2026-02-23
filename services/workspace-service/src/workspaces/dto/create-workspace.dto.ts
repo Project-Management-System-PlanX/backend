@@ -9,10 +9,6 @@ export class CreateWorkspaceDto {
     @IsNotEmpty()
     slug: string;
 
-    @IsString()
-    @IsNotEmpty()
-    ownerId: string;
-
     @IsUrl()
     @IsOptional()
     avatar?: string;

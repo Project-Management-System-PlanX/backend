@@ -10,10 +10,15 @@ export class ChannelsService {
         this.prisma = new PrismaClient();
     }
 
-    async create(createChannelDto: CreateChannelDto) {
-        return this.prisma.channel.create({
+    async create(createChannelDto: CreateChannelDto, createdByUserId: string) {
+        const channel = await this.prisma.channel.create({
             data: createChannelDto,
         });
+        // Auto-join creator as member
+        await this.prisma.channelMember.create({
+            data: { channelId: channel.id, userId: createdByUserId, role: 'ADMIN' },
+        });
+        return channel;
     }
 
     async findByWorkspace(workspaceId: string) {
@@ -43,7 +48,7 @@ export class ChannelsService {
         return channel;
     }
 
-    async update(id: string, updateData: Partial<CreateChannelDto>) {
+    async update(id: string, updateData: Partial<CreateChannelDto>, _userId: string) {
         try {
             return await this.prisma.channel.update({
                 where: { id },
@@ -54,7 +59,7 @@ export class ChannelsService {
         }
     }
 
-    async remove(id: string) {
+    async remove(id: string, _userId: string) {
         try {
             return await this.prisma.channel.delete({
                 where: { id },

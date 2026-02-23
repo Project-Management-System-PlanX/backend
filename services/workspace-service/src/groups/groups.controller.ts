@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { GroupsService } from './groups.service';
 
@@ -7,8 +8,8 @@ export class GroupsController {
     constructor(private readonly groupsService: GroupsService) {}
 
     @Post()
-    create(@Body() createGroupDto: CreateGroupDto) {
-        return this.groupsService.create(createGroupDto);
+    create(@CurrentUser('userId') userId: string, @Body() createGroupDto: CreateGroupDto) {
+        return this.groupsService.create(createGroupDto, userId);
     }
 
     @Get('channel/:channelId')
@@ -22,13 +23,17 @@ export class GroupsController {
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() updateData: Partial<CreateGroupDto>) {
-        return this.groupsService.update(id, updateData);
+    update(
+        @Param('id') id: string,
+        @CurrentUser('userId') userId: string,
+        @Body() updateData: Partial<CreateGroupDto>,
+    ) {
+        return this.groupsService.update(id, updateData, userId);
     }
 
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.groupsService.remove(id);
+    remove(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+        return this.groupsService.remove(id, userId);
     }
 
     @Post(':groupId/members')

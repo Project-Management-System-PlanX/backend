@@ -10,10 +10,15 @@ export class GroupsService {
         this.prisma = new PrismaClient();
     }
 
-    async create(createGroupDto: CreateGroupDto) {
-        return this.prisma.group.create({
+    async create(createGroupDto: CreateGroupDto, createdByUserId: string) {
+        const group = await this.prisma.group.create({
             data: createGroupDto,
         });
+        // Auto-join creator as group member
+        await this.prisma.groupMember.create({
+            data: { groupId: group.id, userId: createdByUserId },
+        });
+        return group;
     }
 
     async findByChannel(channelId: string) {
@@ -37,7 +42,7 @@ export class GroupsService {
         return group;
     }
 
-    async update(id: string, updateData: Partial<CreateGroupDto>) {
+    async update(id: string, updateData: Partial<CreateGroupDto>, _userId: string) {
         try {
             return await this.prisma.group.update({
                 where: { id },
@@ -48,7 +53,7 @@ export class GroupsService {
         }
     }
 
-    async remove(id: string) {
+    async remove(id: string, _userId: string) {
         try {
             return await this.prisma.group.delete({
                 where: { id },

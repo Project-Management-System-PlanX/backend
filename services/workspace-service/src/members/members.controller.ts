@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { MembersService } from './members.service';
 
 @Controller('workspaces/:workspaceId/members')
@@ -21,14 +22,19 @@ export class MembersController {
     @Patch(':userId')
     updateRole(
         @Param('workspaceId') workspaceId: string,
-        @Param('userId') userId: string,
+        @Param('userId') targetUserId: string,
+        @CurrentUser('userId') requesterId: string,
         @Body() body: { role: string },
     ) {
-        return this.membersService.updateRole(workspaceId, userId, body.role);
+        return this.membersService.updateRole(workspaceId, targetUserId, body.role, requesterId);
     }
 
     @Delete(':userId')
-    removeMember(@Param('workspaceId') workspaceId: string, @Param('userId') userId: string) {
-        return this.membersService.removeMember(workspaceId, userId);
+    removeMember(
+        @Param('workspaceId') workspaceId: string,
+        @Param('userId') targetUserId: string,
+        @CurrentUser('userId') requesterId: string,
+    ) {
+        return this.membersService.removeMember(workspaceId, targetUserId, requesterId);
     }
 }
