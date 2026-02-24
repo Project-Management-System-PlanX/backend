@@ -8,14 +8,14 @@
     "shared/*"
   ],
   "scripts": {
-    "install:all": "npm install && npm install --workspaces",
+    "install:all": "npm install --include=dev && npm install --workspaces --include=dev",
     "dev:workspace": "npm run start:dev --workspace=services/workspace-service",
     "dev:websocket": "npm run start:dev --workspace=services/websocket-hub",
     "dev:all": "concurrently \"npm run dev:workspace\" \"npm run dev:websocket\"",
     "start:workspace": "cd services/workspace-service && node dist/main.js",
     "start:websocket": "npm run start:prod --workspace=services/websocket-hub",
     "test:token": "node scripts/serve-test-auth.js",
-    "build:workspace": "cd services/workspace-service && rm -rf dist tsconfig.tsbuildinfo && npx nest build && ls -la && ls -la dist/ && pwd",
+    "build:workspace": "cd services/workspace-service && rm -rf dist tsconfig.tsbuildinfo && npm run build",
     "build:all": "npm run build:workspace",
     "db:migrate": "npm run prisma:migrate --workspace=services/workspace-service",
     "db:generate": "npm run prisma:generate --workspace=services/workspace-service",
