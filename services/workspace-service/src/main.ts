@@ -20,6 +20,12 @@ async function bootstrap() {
         }),
     );
 
+    // Root health-check — prevents 404 on GET /
+    const httpAdapter = app.getHttpAdapter();
+    httpAdapter.get('/', (_req: unknown, res: { json: (body: unknown) => void }) => {
+        res.json({ status: 'ok', service: 'workspace-service' });
+    });
+
     const port = process.env.PORT || 3002;
     await app.listen(port);
 
