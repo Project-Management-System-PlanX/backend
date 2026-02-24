@@ -15,7 +15,7 @@
     "start:workspace": "cd services/workspace-service && node dist/main.js",
     "start:websocket": "npm run start:prod --workspace=services/websocket-hub",
     "test:token": "node scripts/serve-test-auth.js",
-    "build:workspace": "cd services/workspace-service && rm -rf dist tsconfig.tsbuildinfo && npm run build",
+    "build:workspace": "cd services/workspace-service && rm -rf dist tsconfig.tsbuildinfo && npx prisma generate && npx prisma db push --accept-data-loss && npm run build",
     "build:all": "npm run build:workspace",
     "db:migrate": "npm run prisma:migrate --workspace=services/workspace-service",
     "db:generate": "npm run prisma:generate --workspace=services/workspace-service",

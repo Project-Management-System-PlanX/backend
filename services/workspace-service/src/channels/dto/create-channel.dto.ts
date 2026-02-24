@@ -3,7 +3,7 @@ import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 export class CreateChannelDto {
     @IsString()
     @IsNotEmpty()
-    workspaceId: string;
+    projectId: string;
 
     @IsString()
     @IsNotEmpty()

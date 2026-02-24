@@ -12,9 +12,9 @@ export class ChannelsController {
         return this.channelsService.create(createChannelDto, userId);
     }
 
-    @Get('workspace/:workspaceId')
-    findByWorkspace(@Param('workspaceId') workspaceId: string) {
-        return this.channelsService.findByWorkspace(workspaceId);
+    @Get('project/:projectId')
+    findByProject(@Param('projectId') projectId: string) {
+        return this.channelsService.findByProject(projectId);
     }
 
     @Get(':id')

@@ -23,13 +23,13 @@ async function bootstrap() {
     // Root health-check — prevents 404 on GET /
     const httpAdapter = app.getHttpAdapter();
     httpAdapter.get('/', (_req: unknown, res: { json: (body: unknown) => void }) => {
-        res.json({ status: 'ok', service: 'workspace-service' });
+        res.json({ status: 'ok', service: 'project-service' });
     });
 
     const port = process.env.PORT || 3002;
     await app.listen(port);
 
-    console.log(`🚀 Workspace Service running on http://localhost:${port}`);
+    console.log(`🚀 Project Service running on http://localhost:${port}`);
 }
 
 bootstrap();

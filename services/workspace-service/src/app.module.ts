@@ -3,9 +3,9 @@ import { ConfigModule } from '@nestjs/config';
 import { ClerkAuthModule } from './auth/clerk-auth.module';
 import { ChannelsModule } from './channels/channels.module';
 import { GroupsModule } from './groups/groups.module';
-import { MembersModule } from './members/members.module';
+import { ProjectMembersModule } from './project-members/project-members.module';
 import { UsersModule } from './users/users.module';
-import { WorkspacesModule } from './workspaces/workspaces.module';
+import { ProjectsModule } from './projects/projects.module';
 
 @Module({
     imports: [
@@ -15,10 +15,10 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
         }),
         UsersModule,
         ClerkAuthModule,
-        WorkspacesModule,
+        ProjectsModule,
         ChannelsModule,
         GroupsModule,
-        MembersModule,
+        ProjectMembersModule,
     ],
 })
-export class AppModule {}
+export class AppModule { }

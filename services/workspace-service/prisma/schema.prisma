@@ -18,48 +18,81 @@ model User {
   imageUrl  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  // Every employee on the main dashboard belongs to a Company
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+  
+  // The projects they are assigned to
+  projects  ProjectMember[]
 
   @@map("users")
 }
 
-model Workspace {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
-  ownerId   String
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  members  WorkspaceMember[]
-  channels Channel[]
-
-  @@map("workspaces")
-}
-
-model WorkspaceMember {
+// Company (Tenant)
+model Company {
   id          String   @id @default(uuid())
-  workspaceId String
-  userId      String
-  role        String   @default("MEMBER")
-  joinedAt    DateTime @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@unique([workspaceId, userId])
-  @@map("workspace_members")
+  name        String
+  isActive    Boolean  @default(true)
+  subscriptionPlan String @default("FREE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  users       User[]
+  projects    Project[]
+  
+  @@map("companies")
 }
 
+// Project (Replaces Workspace)
+model Project {
+  id          String   @id @default(uuid())
+  companyId   String   // Belongs strictly to a company
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  members     ProjectMember[]
+  channels    Channel[] 
+  
+  @@map("projects")
+}
+
+enum ProjectRole {
+  MANAGER
+  TECH_LEAD
+  HR
+  EMPLOYEE
+}
+
+// Project Assignments
+model ProjectMember {
+  id          String      @id @default(uuid())
+  projectId   String
+  userId      String
+  role        ProjectRole @default(EMPLOYEE)
+  joinedAt    DateTime    @default(now())
+  
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+// Channel
 model Channel {
   id          String   @id @default(uuid())
-  workspaceId String
+  projectId   String
   name        String
   type        String   @default("PUBLIC")
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   members   ChannelMember[]
   groups    Group[]
 
@@ -79,6 +112,7 @@ model ChannelMember {
   @@map("channel_members")
 }
 
+// Group
 model Group {
   id          String   @id @default(uuid())
   channelId   String

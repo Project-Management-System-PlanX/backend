@@ -21,9 +21,9 @@ export class ChannelsService {
         return channel;
     }
 
-    async findByWorkspace(workspaceId: string) {
+    async findByProject(projectId: string) {
         return this.prisma.channel.findMany({
-            where: { workspaceId },
+            where: { projectId },
             include: {
                 members: true,
                 groups: true,
