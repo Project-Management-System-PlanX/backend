@@ -13,6 +13,8 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@clerk/backend": "^2.32.1",
+    "@clerk/clerk-sdk-node": "^4.13.23",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.1.1",
     "@nestjs/core": "^10.3.0",
