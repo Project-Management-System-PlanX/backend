@@ -23,7 +23,6 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check --write .",
-    "prepare": "husky",
     "clean": "rm -rf node_modules services/*/node_modules services/*/dist shared/*/node_modules"
   },
   "lint-staged": {
