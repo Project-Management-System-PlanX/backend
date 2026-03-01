@@ -7,7 +7,7 @@
     "start:dev": "npm run build && nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
-    "build": "nest build",
+    "build": "rm -rf dist tsconfig.tsbuildinfo && nest build",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
