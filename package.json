@@ -16,7 +16,7 @@
     "start:websocket": "npm run start:prod --workspace=services/websocket-hub",
     "build:workspace": "cd services/workspace-service && npx prisma generate && npm run build",
     "build:all": "npm run build:workspace",
-    "render-build": "npm install --production=false && npm run build:workspace && npm run db:deploy",
+    "render-build": "NODE_ENV=development npm install && npm run build:workspace && npm run db:deploy",
     "db:migrate": "npm run prisma:migrate --workspace=services/workspace-service",
     "db:deploy": "cd services/workspace-service && npx prisma migrate deploy",
     "db:generate": "npm run prisma:generate --workspace=services/workspace-service",
