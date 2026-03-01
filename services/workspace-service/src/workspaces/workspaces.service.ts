@@ -4,17 +4,13 @@ import {
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 
 @Injectable()
 export class WorkspacesService {
-    private prisma: PrismaClient;
-
-    constructor() {
-        this.prisma = new PrismaClient();
-    }
+    constructor(private readonly prisma: PrismaService) { }
 
     async create(createWorkspaceDto: CreateWorkspaceDto, ownerId: string) {
         // Check if slug already exists
@@ -29,7 +25,7 @@ export class WorkspacesService {
         const workspace = await this.prisma.workspace.create({
             data: {
                 ...createWorkspaceDto,
-                ownerId, // Injected from Clerk JWT — never from request body
+                ownerId, // Injected from Supabase auth — never from request body
             },
         });
 

@@ -3,11 +3,10 @@ import type { Request } from 'express';
 
 export interface AuthUser {
     userId: string;
-    sessionId: string;
 }
 
 /**
- * Parameter decorator to extract the authenticated Clerk user from the request.
+ * Parameter decorator to extract the authenticated Supabase user from the request.
  * Usage: @CurrentUser() user: AuthUser
  * Usage: @CurrentUser('userId') userId: string
  */

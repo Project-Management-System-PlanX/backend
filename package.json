@@ -14,10 +14,10 @@
     "dev:all": "concurrently \"npm run dev:workspace\" \"npm run dev:websocket\"",
     "start:workspace": "cd services/workspace-service && node dist/main.js",
     "start:websocket": "npm run start:prod --workspace=services/websocket-hub",
-    "test:token": "node scripts/serve-test-auth.js",
-    "build:workspace": "cd services/workspace-service && rm -rf dist tsconfig.tsbuildinfo && npx nest build && ls -la && ls -la dist/ && pwd",
+    "build:workspace": "cd services/workspace-service && npx prisma generate && npx nest build",
     "build:all": "npm run build:workspace",
     "db:migrate": "npm run prisma:migrate --workspace=services/workspace-service",
+    "db:deploy": "cd services/workspace-service && npx prisma migrate deploy",
     "db:generate": "npm run prisma:generate --workspace=services/workspace-service",
     "db:studio": "npm run prisma:studio --workspace=services/workspace-service",
     "lint": "biome lint .",
@@ -44,6 +44,6 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
-    "@clerk/clerk-sdk-node": "^4.13.23"
+    "@supabase/supabase-js": "^2.98.0"
   }
 }

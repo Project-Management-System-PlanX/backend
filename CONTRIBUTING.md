@@ -19,7 +19,7 @@ Thank you for contributing! Please follow these guidelines to maintain code qual
 3. **Set up environment**
    ```bash
    cp .env.example .env
-   # Add your Aiven and Upstash credentials
+   # Add your Supabase and Upstash credentials
    ```
 
 4. **Create a feature branch**

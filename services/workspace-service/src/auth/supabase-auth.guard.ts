@@ -1,4 +1,3 @@
-import { verifyToken } from '@clerk/backend';
 import {
     CanActivate,
     ExecutionContext,
@@ -7,12 +6,12 @@ import {
     UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Request } from 'express';
 import { UsersService } from '../users/users.service';
 
 export interface AuthUser {
-    userId: string; // Clerk user ID (user_xxx)
-    sessionId: string;
+    userId: string; // Supabase user ID (auth.users.id)
     email: string;
     firstName?: string;
     lastName?: string;
@@ -21,19 +20,22 @@ export interface AuthUser {
 }
 
 @Injectable()
-export class ClerkAuthGuard implements CanActivate {
-    private readonly logger = new Logger(ClerkAuthGuard.name);
-    private readonly secretKey: string;
+export class SupabaseAuthGuard implements CanActivate {
+    private readonly logger = new Logger(SupabaseAuthGuard.name);
+    private readonly supabase: SupabaseClient;
 
     constructor(
         private readonly configService: ConfigService,
         private readonly usersService: UsersService,
     ) {
-        const secretKey = this.configService.get<string>('CLERK_SECRET_KEY');
-        if (!secretKey) {
-            throw new Error('CLERK_SECRET_KEY is not configured');
+        const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+        const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
+
+        if (!supabaseUrl || !supabaseAnonKey) {
+            throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY must be configured');
         }
-        this.secretKey = secretKey;
+
+        this.supabase = createClient(supabaseUrl, supabaseAnonKey);
     }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -47,19 +49,23 @@ export class ClerkAuthGuard implements CanActivate {
         const token = authHeader.slice(7);
 
         try {
-            const payload = await verifyToken(token, {
-                secretKey: this.secretKey,
-            });
+            const {
+                data: { user },
+                error,
+            } = await this.supabase.auth.getUser(token);
 
-            // Extract user profile claims from JWT
+            if (error || !user) {
+                throw new Error(error?.message || 'Invalid user');
+            }
+
+            // Extract user profile claims from Supabase user_metadata
             const authUser: AuthUser = {
-                userId: payload.sub,
-                sessionId: (payload.sid as string) ?? '',
-                email: (payload['email'] as string) ?? '',
-                firstName: (payload['first_name'] as string) ?? undefined,
-                lastName: (payload['last_name'] as string) ?? undefined,
-                username: (payload['username'] as string) ?? undefined,
-                imageUrl: (payload['image_url'] as string) ?? undefined,
+                userId: user.id,
+                email: user.email || '',
+                firstName: user.user_metadata?.first_name,
+                lastName: user.user_metadata?.last_name,
+                username: user.user_metadata?.username,
+                imageUrl: user.user_metadata?.avatar_url,
             };
 
             // Attach to request for @CurrentUser() decorator
@@ -68,8 +74,8 @@ export class ClerkAuthGuard implements CanActivate {
             // Auto-sync user to our DB (upsert) — fire and forget, non-blocking
             if (authUser.email) {
                 this.usersService
-                    .upsertFromClerk({
-                        clerkId: authUser.userId,
+                    .upsertFromSupabase({
+                        supabaseId: authUser.userId,
                         email: authUser.email,
                         firstName: authUser.firstName,
                         lastName: authUser.lastName,

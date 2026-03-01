@@ -1,13 +1,9 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class MembersService {
-    private prisma: PrismaClient;
-
-    constructor() {
-        this.prisma = new PrismaClient();
-    }
+    constructor(private readonly prisma: PrismaService) { }
 
     async addMember(workspaceId: string, userId: string, role: string = 'MEMBER') {
         return this.prisma.workspaceMember.create({

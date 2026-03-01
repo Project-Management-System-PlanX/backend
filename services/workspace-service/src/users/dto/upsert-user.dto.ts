@@ -3,7 +3,7 @@ import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 export class UpsertUserDto {
     @IsString()
     @IsNotEmpty()
-    clerkId: string;
+    supabaseId: string;
 
     @IsEmail()
     @IsNotEmpty()

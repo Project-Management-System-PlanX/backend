@@ -7,10 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User profile — synced from Clerk on first login and kept up-to-date
+// User profile — synced from Supabase on first login and kept up-to-date
 model User {
   id        String   @id @default(uuid())
-  clerkId   String   @unique // Clerk's user_xxx ID (the JWT sub claim)
+  supabaseId String   @unique // Supabase user ID (auth.users.id)
   email     String   @unique
   firstName String?
   lastName  String?

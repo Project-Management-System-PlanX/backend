@@ -1,4 +1,3 @@
-import { Clerk } from '@clerk/backend';
 import {
     CanActivate,
     ExecutionContext,
@@ -7,19 +6,22 @@ import {
     UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Request } from 'express';
 
 @Injectable()
-export class ClerkAuthGuard implements CanActivate {
-    private readonly logger = new Logger(ClerkAuthGuard.name);
-    private readonly clerk: ReturnType<typeof Clerk>;
+export class SupabaseAuthGuard implements CanActivate {
+    private readonly logger = new Logger(SupabaseAuthGuard.name);
+    private readonly supabase: SupabaseClient;
 
     constructor(private readonly configService: ConfigService) {
-        const secretKey = this.configService.get<string>('CLERK_SECRET_KEY');
-        if (!secretKey) {
-            throw new Error('CLERK_SECRET_KEY is not configured');
+        const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+        const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
+
+        if (!supabaseUrl || !supabaseAnonKey) {
+            throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY are not configured');
         }
-        this.clerk = Clerk({ secretKey });
+        this.supabase = createClient(supabaseUrl, supabaseAnonKey);
     }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -33,15 +35,18 @@ export class ClerkAuthGuard implements CanActivate {
         const token = authHeader.slice(7);
 
         try {
-            const payload = await this.clerk.verifyToken(token);
+            const { data: { user }, error } = await this.supabase.auth.getUser(token);
+
+            if (error || !user) {
+                throw new Error(error?.message || 'Invalid user');
+            }
 
             // Attach auth info to request for use in controllers
-            (request as Request & { auth: { userId: string; sessionId: string } }).auth = {
-                userId: payload.sub,
-                sessionId: (payload.sid as string) ?? '',
+            (request as Request & { auth: { userId: string } }).auth = {
+                userId: user.id
             };
 
-            this.logger.debug(`Authenticated user: ${payload.sub}`);
+            this.logger.debug(`Authenticated user: ${user.id}`);
             return true;
         } catch (error) {
             this.logger.warn(`Token verification failed: ${(error as Error).message}`);

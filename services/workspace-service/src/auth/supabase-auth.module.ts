@@ -1,23 +1,23 @@
 import { Global, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { UsersModule } from '../users/users.module';
-import { ClerkAuthGuard } from './clerk-auth.guard';
+import { SupabaseAuthGuard } from './supabase-auth.guard';
 
 /**
- * Global Clerk auth module. Import once in AppModule.
- * Provides ClerkAuthGuard as APP_GUARD (protects all routes).
+ * Global Supabase auth module. Import once in AppModule.
+ * Provides SupabaseAuthGuard as APP_GUARD (protects all routes).
  * Imports UsersModule so UsersService can be injected into the guard for auto-sync.
  */
 @Global()
 @Module({
     imports: [UsersModule],
     providers: [
-        ClerkAuthGuard,
+        SupabaseAuthGuard,
         {
             provide: APP_GUARD,
-            useClass: ClerkAuthGuard,
+            useClass: SupabaseAuthGuard,
         },
     ],
-    exports: [ClerkAuthGuard],
+    exports: [SupabaseAuthGuard],
 })
-export class ClerkAuthModule {}
+export class SupabaseAuthModule { }

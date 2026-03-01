@@ -1,9 +1,9 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
-import type { AuthUser } from './clerk-auth.guard';
+import type { AuthUser } from './supabase-auth.guard';
 
 /**
- * Parameter decorator to extract the authenticated Clerk user from the request.
+ * Parameter decorator to extract the authenticated Supabase user from the request.
  *
  * Usage:
  *   @CurrentUser() user: AuthUser              — full auth object

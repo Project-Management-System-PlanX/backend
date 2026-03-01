@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
-export interface ClerkUserData {
-    clerkId: string;
+export interface SupabaseUserData {
+    supabaseId: string;
     email: string;
     firstName?: string;
     lastName?: string;
@@ -13,21 +13,18 @@ export interface ClerkUserData {
 @Injectable()
 export class UsersService {
     private readonly logger = new Logger(UsersService.name);
-    private prisma: PrismaClient;
 
-    constructor() {
-        this.prisma = new PrismaClient();
-    }
+    constructor(private readonly prisma: PrismaService) { }
 
     /**
-     * Upsert a user from Clerk JWT claims.
+     * Upsert a user from Supabase JWT claims.
      * Called automatically on every authenticated request by the auth guard.
      */
-    async upsertFromClerk(data: ClerkUserData) {
+    async upsertFromSupabase(data: SupabaseUserData) {
         return this.prisma.user.upsert({
-            where: { clerkId: data.clerkId },
+            where: { supabaseId: data.supabaseId },
             create: {
-                clerkId: data.clerkId,
+                supabaseId: data.supabaseId,
                 email: data.email,
                 firstName: data.firstName ?? null,
                 lastName: data.lastName ?? null,
@@ -45,20 +42,20 @@ export class UsersService {
     }
 
     /**
-     * Get my profile by Clerk ID.
+     * Get my profile by Supabase ID.
      */
-    async getMe(clerkId: string) {
+    async getMe(supabaseId: string) {
         return this.prisma.user.findUnique({
-            where: { clerkId },
+            where: { supabaseId },
         });
     }
 
     /**
-     * Get a user by their Clerk ID (used internally across other services).
+     * Get a user by their Supabase ID (used internally across other services).
      */
-    async findByClerkId(clerkId: string) {
+    async findBySupabaseId(supabaseId: string) {
         return this.prisma.user.findUnique({
-            where: { clerkId },
+            where: { supabaseId },
         });
     }
 }

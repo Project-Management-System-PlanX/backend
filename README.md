@@ -1,6 +1,6 @@
 # TeamUp Backend - Microservices Architecture
 
-A scalable microservices backend for TeamUp collaboration platform built with NestJS, Prisma, PostgreSQL, and Redis.
+A scalable microservices backend for TeamUp collaboration platform built with NestJS, Prisma, Supabase (PostgreSQL + Auth), and Redis.
 
 ---
 
@@ -119,7 +119,7 @@ A scalable microservices backend for TeamUp collaboration platform built with Ne
                       │              │
               ┌───────▼──────┐  ┌───▼──────────┐
               │  PostgreSQL  │  │    Redis     │
-              │    (Aiven)   │  │  (Upstash)   │
+              │  (Supabase)  │  │  (Upstash)   │
               └──────────────┘  └──────────────┘
 ```
 
@@ -143,7 +143,7 @@ A scalable microservices backend for TeamUp collaboration platform built with Ne
 
 - **Node.js** >= 18.0.0
 - **npm** >= 9.0.0
-- **PostgreSQL** (Aiven Cloud)
+- **PostgreSQL** (Supabase)
 - **Redis** (Upstash)
 - **Git**
 
@@ -172,29 +172,25 @@ nano .env
 **Required environment variables:**
 
 ```env
-# Aiven PostgreSQL
-DATABASE_URL=postgres://avnadmin:PASSWORD@HOST:PORT/teamup-workspace?sslmode=require
+# Supabase
+SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+SUPABASE_ANON_KEY=your-supabase-anon-key
 
-# Upstash Redis
-REDIS_URL=redis://default:PASSWORD@HOST:PORT
+# Supabase PostgreSQL
+DATABASE_URL=postgresql://postgres.YOUR_PROJECT_ID:YOUR_PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres?pgbouncer=true
 
 # Application
 NODE_ENV=development
-JWT_SECRET=your-super-secret-key-change-this
 PORT=3002
 ```
 
 ### **3. Database Setup**
 
-**Important:** Whitelist your IP in Aiven Console first!
+Get your database connection string from the Supabase Dashboard:
+**Project Settings → Database → Connection string**
 
-```bash
-# Get your public IP
-curl ifconfig.me
-
-# Add this IP to Aiven Console:
-# Console → teamup-workspace → Allowed IP Addresses → Add your IP/32
-```
+Use the **Transaction** pooler (port 6543) for application connections,
+and the **Session** pooler (port 5432) for running migrations.
 
 Then run migrations:
 
@@ -347,15 +343,14 @@ npm run db:studio
 # Visual interface to browse/edit database
 ```
 
-### **Using psql (Direct Database Access)**
+### **Using Supabase Dashboard (Direct Database Access)**
 
+You can browse and query your data directly in the Supabase Dashboard:
+**Table Editor** → Select a table → Browse/filter data
+
+Or use `psql` with your Supabase connection string:
 ```bash
-psql "postgres://avnadmin:PASSWORD@HOST:PORT/teamup-workspace?sslmode=require"
-
-# Inside psql:
-\dt                          # List tables
-SELECT * FROM workspaces;    # Query data
-\q                           # Quit
+psql "postgresql://postgres.YOUR_PROJECT_ID:YOUR_PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres"
 ```
 
 ---
@@ -365,14 +360,10 @@ SELECT * FROM workspaces;    # Query data
 ### **Can't connect to database**
 
 ```bash
-# 1. Check if your IP is whitelisted in Aiven
-curl ifconfig.me
-
-# 2. Add your IP to Aiven Console:
-#    Console → teamup-workspace → Allowed IP Addresses
-
+# 1. Ensure your DATABASE_URL in .env matches Supabase connection string
+# 2. Check Supabase Dashboard → Project Settings → Database for the correct URL
 # 3. Test connection
-nc -zv HOST PORT
+nc -zv aws-0-REGION.pooler.supabase.com 6543
 ```
 
 ### **Prisma errors**
