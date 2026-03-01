@@ -1,15 +1,93 @@
 # TeamUp Workspace Service API Documentation
 
-**Base URL:** `http://localhost:3002`
+**Base URL:** `http://localhost:3002` (development) or your Render URL (production)
+
+**Authentication:** All endpoints (except `GET /`) require a Supabase access token:
+```
+Authorization: Bearer <supabase_access_token>
+```
 
 ---
 
 ## 📋 Table of Contents
 
-1. [Workspaces](#workspaces)
-2. [Channels](#channels)
-3. [Groups](#groups)
+1. [Authentication](#authentication)
+2. [Users](#users)
+3. [Workspaces](#workspaces)
 4. [Workspace Members](#workspace-members)
+5. [Channels](#channels)
+6. [Groups](#groups)
+7. [Error Responses](#error-responses)
+
+---
+
+## 🔐 Authentication
+
+All API requests (except `GET /`) must include a valid Supabase access token in the `Authorization` header.
+
+**How to get a token:**
+1. Sign in via Supabase Auth (email/password, Google OAuth, etc.)
+2. Get the session: `supabase.auth.getSession()`
+3. Use `session.access_token` as the Bearer token
+
+**Example:**
+```bash
+curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." http://localhost:3002/workspaces
+```
+
+**What happens on each request:**
+1. The guard extracts and validates the Bearer token via `supabase.auth.getUser(token)`
+2. The user profile is automatically synced to the database (upsert by `supabaseId`)
+3. The authenticated user's ID is available in controllers via `@CurrentUser('userId')`
+
+---
+
+## 🔓 Health Check
+
+### `GET /`
+
+Returns service health status. **No authentication required.**
+
+**Response:** `200 OK`
+```json
+{
+  "status": "ok",
+  "service": "workspace-service"
+}
+```
+
+---
+
+## 👤 Users
+
+### Get My Profile
+
+**Endpoint:** `GET /users/me`
+
+**Description:** Returns the authenticated user's profile from the database.
+
+**Response:** `200 OK`
+```json
+{
+  "id": "internal-uuid",
+  "supabaseId": "supabase-auth-uuid",
+  "email": "user@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "username": "johndoe",
+  "imageUrl": "https://lh3.googleusercontent.com/...",
+  "createdAt": "2026-03-01T14:00:00.000Z",
+  "updatedAt": "2026-03-01T14:00:00.000Z"
+}
+```
+
+> **Note:** User profiles are auto-created on first authenticated request. No separate signup endpoint is needed.
+
+**cURL Example:**
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  http://localhost:3002/users/me
+```
 
 ---
 
@@ -19,23 +97,25 @@
 
 **Endpoint:** `POST /workspaces`
 
-**Description:** Creates a new workspace and automatically adds the owner as a member.
+**Permission:** Any authenticated user
+
+**Description:** Creates a new workspace. The authenticated user is automatically set as `ownerId` and added as a member with `OWNER` role.
 
 **Request Body:**
 ```json
 {
   "name": "My Team",
   "slug": "my-team",
-  "ownerId": "user-123",
-  "avatar": "https://example.com/avatar.png" // optional
+  "avatar": "https://example.com/avatar.png"
 }
 ```
 
 **Validation:**
 - `name` (required, string): Workspace name
 - `slug` (required, string, unique): URL-friendly identifier
-- `ownerId` (required, string): User ID of the workspace owner
-- `avatar` (optional, string, URL): Workspace avatar image URL
+- `avatar` (optional, URL): Workspace avatar image
+
+> **Note:** `ownerId` is injected from the authenticated user — never from the request body.
 
 **Response:** `201 Created`
 ```json
@@ -43,38 +123,37 @@
   "id": "ws-uuid-123",
   "name": "My Team",
   "slug": "my-team",
-  "ownerId": "user-123",
+  "ownerId": "supabase-user-uuid",
   "avatar": "https://example.com/avatar.png",
-  "createdAt": "2026-02-13T10:30:00.000Z",
-  "updatedAt": "2026-02-13T10:30:00.000Z"
+  "createdAt": "2026-03-01T14:00:00.000Z",
+  "updatedAt": "2026-03-01T14:00:00.000Z"
 }
 ```
 
 **Errors:**
-- `409 Conflict` - Workspace with this slug already exists
-- `400 Bad Request` - Invalid input data
+- `409 Conflict` — Workspace with this slug already exists
+- `400 Bad Request` — Invalid input data
 
 **cURL Example:**
 ```bash
 curl -X POST http://localhost:3002/workspaces \
+  -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "My Team",
-    "slug": "my-team",
-    "ownerId": "user-123"
+    "slug": "my-team"
   }'
 ```
 
 ---
 
-### List Workspaces
+### List My Workspaces
 
 **Endpoint:** `GET /workspaces`
 
-**Description:** Lists all workspaces, optionally filtered by user membership.
+**Permission:** Any authenticated user
 
-**Query Parameters:**
-- `userId` (optional, string): Filter workspaces where user is a member
+**Description:** Returns only workspaces where the authenticated user is a member.
 
 **Response:** `200 OK`
 ```json
@@ -83,21 +162,18 @@ curl -X POST http://localhost:3002/workspaces \
     "id": "ws-uuid-123",
     "name": "My Team",
     "slug": "my-team",
-    "ownerId": "user-123",
+    "ownerId": "supabase-user-uuid",
     "avatar": "https://example.com/avatar.png",
-    "createdAt": "2026-02-13T10:30:00.000Z",
-    "updatedAt": "2026-02-13T10:30:00.000Z"
+    "createdAt": "2026-03-01T14:00:00.000Z",
+    "updatedAt": "2026-03-01T14:00:00.000Z"
   }
 ]
 ```
 
-**cURL Examples:**
+**cURL Example:**
 ```bash
-# Get all workspaces
-curl http://localhost:3002/workspaces
-
-# Get workspaces for specific user
-curl "http://localhost:3002/workspaces?userId=user-123"
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  http://localhost:3002/workspaces
 ```
 
 ---
@@ -106,10 +182,9 @@ curl "http://localhost:3002/workspaces?userId=user-123"
 
 **Endpoint:** `GET /workspaces/:id`
 
-**Description:** Get a single workspace with members and channels.
+**Permission:** Any authenticated user
 
-**Path Parameters:**
-- `id` (required): Workspace ID
+**Description:** Get a single workspace with its members and channels.
 
 **Response:** `200 OK`
 ```json
@@ -117,17 +192,17 @@ curl "http://localhost:3002/workspaces?userId=user-123"
   "id": "ws-uuid-123",
   "name": "My Team",
   "slug": "my-team",
-  "ownerId": "user-123",
-  "avatar": "https://example.com/avatar.png",
-  "createdAt": "2026-02-13T10:30:00.000Z",
-  "updatedAt": "2026-02-13T10:30:00.000Z",
+  "ownerId": "supabase-user-uuid",
+  "avatar": null,
+  "createdAt": "2026-03-01T14:00:00.000Z",
+  "updatedAt": "2026-03-01T14:00:00.000Z",
   "members": [
     {
       "id": "member-uuid-1",
       "workspaceId": "ws-uuid-123",
-      "userId": "user-123",
+      "userId": "supabase-user-uuid",
       "role": "OWNER",
-      "joinedAt": "2026-02-13T10:30:00.000Z"
+      "joinedAt": "2026-03-01T14:00:00.000Z"
     }
   ],
   "channels": [
@@ -137,20 +212,15 @@ curl "http://localhost:3002/workspaces?userId=user-123"
       "name": "general",
       "type": "PUBLIC",
       "description": "General discussion",
-      "createdAt": "2026-02-13T10:35:00.000Z",
-      "updatedAt": "2026-02-13T10:35:00.000Z"
+      "createdAt": "2026-03-01T14:05:00.000Z",
+      "updatedAt": "2026-03-01T14:05:00.000Z"
     }
   ]
 }
 ```
 
 **Errors:**
-- `404 Not Found` - Workspace not found
-
-**cURL Example:**
-```bash
-curl http://localhost:3002/workspaces/ws-uuid-123
-```
+- `404 Not Found` — Workspace not found
 
 ---
 
@@ -158,10 +228,7 @@ curl http://localhost:3002/workspaces/ws-uuid-123
 
 **Endpoint:** `PATCH /workspaces/:id`
 
-**Description:** Update workspace details (name or avatar).
-
-**Path Parameters:**
-- `id` (required): Workspace ID
+**Permission:** Workspace `OWNER` or `ADMIN` only
 
 **Request Body:**
 ```json
@@ -173,32 +240,12 @@ curl http://localhost:3002/workspaces/ws-uuid-123
 
 **Validation:**
 - `name` (optional, string): New workspace name
-- `avatar` (optional, string, URL): New avatar URL
-- Note: Cannot update `slug` or `ownerId`
-
-**Response:** `200 OK`
-```json
-{
-  "id": "ws-uuid-123",
-  "name": "Updated Team Name",
-  "slug": "my-team",
-  "ownerId": "user-123",
-  "avatar": "https://example.com/new-avatar.png",
-  "createdAt": "2026-02-13T10:30:00.000Z",
-  "updatedAt": "2026-02-13T10:45:00.000Z"
-}
-```
+- `avatar` (optional, URL): New avatar URL
+- Cannot update `slug` or `ownerId`
 
 **Errors:**
-- `404 Not Found` - Workspace not found
-- `400 Bad Request` - Invalid input data
-
-**cURL Example:**
-```bash
-curl -X PATCH http://localhost:3002/workspaces/ws-uuid-123 \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Updated Team Name"}'
-```
+- `403 Forbidden` — Insufficient permissions
+- `404 Not Found` — Workspace not found
 
 ---
 
@@ -206,41 +253,99 @@ curl -X PATCH http://localhost:3002/workspaces/ws-uuid-123 \
 
 **Endpoint:** `DELETE /workspaces/:id`
 
-**Description:** Delete a workspace and all related data (members, channels, etc.).
+**Permission:** Workspace `OWNER` only
 
-**Path Parameters:**
-- `id` (required): Workspace ID
+**Description:** Deletes the workspace and all related data (members, channels, groups) via cascade.
 
-**Response:** `200 OK`
+**Errors:**
+- `403 Forbidden` — Only the workspace owner can delete it
+- `404 Not Found` — Workspace not found
+
+---
+
+## 👥 Workspace Members
+
+### Add Member
+
+**Endpoint:** `POST /workspaces/:workspaceId/members`
+
+**Permission:** Any authenticated user
+
+**Request Body:**
 ```json
 {
-  "id": "ws-uuid-123",
-  "name": "My Team",
-  "slug": "my-team",
-  "ownerId": "user-123",
-  "avatar": null,
-  "createdAt": "2026-02-13T10:30:00.000Z",
-  "updatedAt": "2026-02-13T10:30:00.000Z"
+  "userId": "supabase-user-uuid",
+  "role": "MEMBER"
 }
 ```
 
-**Errors:**
-- `404 Not Found` - Workspace not found
+**Roles:** `OWNER`, `ADMIN`, `MEMBER` (default)
 
-**cURL Example:**
-```bash
-curl -X DELETE http://localhost:3002/workspaces/ws-uuid-123
+---
+
+### List Members
+
+**Endpoint:** `GET /workspaces/:workspaceId/members`
+
+**Permission:** Any authenticated user
+
+**Response:** `200 OK`
+```json
+[
+  {
+    "id": "member-uuid",
+    "workspaceId": "ws-uuid-123",
+    "userId": "supabase-user-uuid",
+    "role": "OWNER",
+    "joinedAt": "2026-03-01T14:00:00.000Z"
+  }
+]
 ```
 
 ---
 
-## 🔷 Channels
+### Update Member Role
+
+**Endpoint:** `PATCH /workspaces/:workspaceId/members/:userId`
+
+**Permission:** Workspace `OWNER` or `ADMIN` only
+
+**Request Body:**
+```json
+{
+  "role": "ADMIN"
+}
+```
+
+**Errors:**
+- `403 Forbidden` — Insufficient permissions
+- `404 Not Found` — Member not found
+
+---
+
+### Remove Member
+
+**Endpoint:** `DELETE /workspaces/:workspaceId/members/:userId`
+
+**Permission:**
+- Members can remove **themselves** (leave workspace)
+- `OWNER` or `ADMIN` can remove **anyone**
+
+**Errors:**
+- `403 Forbidden` — Insufficient permissions
+- `404 Not Found` — Requester is not a workspace member
+
+---
+
+## 📢 Channels
 
 ### Create Channel
 
 **Endpoint:** `POST /channels`
 
-**Description:** Creates a new channel in a workspace.
+**Permission:** Must be a member of the workspace
+
+**Description:** Creates a channel in a workspace. The creator is automatically added as a channel member with `ADMIN` role.
 
 **Request Body:**
 ```json
@@ -258,33 +363,8 @@ curl -X DELETE http://localhost:3002/workspaces/ws-uuid-123
 - `type` (optional, enum): `"PUBLIC"` or `"PRIVATE"` (default: `"PUBLIC"`)
 - `description` (optional, string): Channel description
 
-**Response:** `201 Created`
-```json
-{
-  "id": "channel-uuid-1",
-  "workspaceId": "ws-uuid-123",
-  "name": "general",
-  "type": "PUBLIC",
-  "description": "General discussion channel",
-  "createdAt": "2026-02-13T10:35:00.000Z",
-  "updatedAt": "2026-02-13T10:35:00.000Z"
-}
-```
-
 **Errors:**
-- `400 Bad Request` - Invalid input or workspace doesn't exist
-
-**cURL Example:**
-```bash
-curl -X POST http://localhost:3002/channels \
-  -H "Content-Type: application/json" \
-  -d '{
-    "workspaceId": "ws-uuid-123",
-    "name": "general",
-    "type": "PUBLIC",
-    "description": "General discussion"
-  }'
-```
+- `403 Forbidden` — You must be a workspace member to create a channel
 
 ---
 
@@ -292,10 +372,7 @@ curl -X POST http://localhost:3002/channels \
 
 **Endpoint:** `GET /channels/workspace/:workspaceId`
 
-**Description:** Get all channels in a workspace with members and groups.
-
-**Path Parameters:**
-- `workspaceId` (required): Workspace ID
+**Permission:** Any authenticated user
 
 **Response:** `200 OK`
 ```json
@@ -306,25 +383,12 @@ curl -X POST http://localhost:3002/channels \
     "name": "general",
     "type": "PUBLIC",
     "description": "General discussion",
-    "createdAt": "2026-02-13T10:35:00.000Z",
-    "updatedAt": "2026-02-13T10:35:00.000Z",
-    "members": [
-      {
-        "id": "cm-uuid-1",
-        "channelId": "channel-uuid-1",
-        "userId": "user-123",
-        "role": "MEMBER",
-        "joinedAt": "2026-02-13T10:35:00.000Z"
-      }
-    ],
-    "groups": []
+    "createdAt": "2026-03-01T14:05:00.000Z",
+    "updatedAt": "2026-03-01T14:05:00.000Z",
+    "members": [...],
+    "groups": [...]
   }
 ]
-```
-
-**cURL Example:**
-```bash
-curl http://localhost:3002/channels/workspace/ws-uuid-123
 ```
 
 ---
@@ -333,33 +397,12 @@ curl http://localhost:3002/channels/workspace/ws-uuid-123
 
 **Endpoint:** `GET /channels/:id`
 
-**Description:** Get a single channel with members and groups.
+**Permission:** Any authenticated user
 
-**Path Parameters:**
-- `id` (required): Channel ID
-
-**Response:** `200 OK`
-```json
-{
-  "id": "channel-uuid-1",
-  "workspaceId": "ws-uuid-123",
-  "name": "general",
-  "type": "PUBLIC",
-  "description": "General discussion",
-  "createdAt": "2026-02-13T10:35:00.000Z",
-  "updatedAt": "2026-02-13T10:35:00.000Z",
-  "members": [...],
-  "groups": [...]
-}
-```
+**Response includes:** Channel details with `members` and `groups` arrays.
 
 **Errors:**
-- `404 Not Found` - Channel not found
-
-**cURL Example:**
-```bash
-curl http://localhost:3002/channels/channel-uuid-1
-```
+- `404 Not Found` — Channel not found
 
 ---
 
@@ -367,10 +410,7 @@ curl http://localhost:3002/channels/channel-uuid-1
 
 **Endpoint:** `PATCH /channels/:id`
 
-**Description:** Update channel details.
-
-**Path Parameters:**
-- `id` (required): Channel ID
+**Permission:** Channel `ADMIN`, Workspace `OWNER`, or Workspace `ADMIN`
 
 **Request Body:**
 ```json
@@ -381,33 +421,9 @@ curl http://localhost:3002/channels/channel-uuid-1
 }
 ```
 
-**Validation:**
-- All fields are optional
-- `type` must be `"PUBLIC"` or `"PRIVATE"` if provided
-
-**Response:** `200 OK`
-```json
-{
-  "id": "channel-uuid-1",
-  "workspaceId": "ws-uuid-123",
-  "name": "updated-general",
-  "type": "PRIVATE",
-  "description": "Updated description",
-  "createdAt": "2026-02-13T10:35:00.000Z",
-  "updatedAt": "2026-02-13T11:00:00.000Z"
-}
-```
-
 **Errors:**
-- `404 Not Found` - Channel not found
-- `400 Bad Request` - Invalid input data
-
-**cURL Example:**
-```bash
-curl -X PATCH http://localhost:3002/channels/channel-uuid-1 \
-  -H "Content-Type: application/json" \
-  -d '{"name": "updated-general"}'
-```
+- `403 Forbidden` — Insufficient permissions to modify this channel
+- `404 Not Found` — Channel not found
 
 ---
 
@@ -415,31 +431,13 @@ curl -X PATCH http://localhost:3002/channels/channel-uuid-1 \
 
 **Endpoint:** `DELETE /channels/:id`
 
-**Description:** Delete a channel and all related data (members, groups, etc.).
+**Permission:** Channel `ADMIN`, Workspace `OWNER`, or Workspace `ADMIN`
 
-**Path Parameters:**
-- `id` (required): Channel ID
-
-**Response:** `200 OK`
-```json
-{
-  "id": "channel-uuid-1",
-  "workspaceId": "ws-uuid-123",
-  "name": "general",
-  "type": "PUBLIC",
-  "description": "General discussion",
-  "createdAt": "2026-02-13T10:35:00.000Z",
-  "updatedAt": "2026-02-13T10:35:00.000Z"
-}
-```
+**Description:** Deletes the channel and all related data (members, groups, group members) via cascade.
 
 **Errors:**
-- `404 Not Found` - Channel not found
-
-**cURL Example:**
-```bash
-curl -X DELETE http://localhost:3002/channels/channel-uuid-1
-```
+- `403 Forbidden` — Insufficient permissions
+- `404 Not Found` — Channel not found
 
 ---
 
@@ -447,39 +445,14 @@ curl -X DELETE http://localhost:3002/channels/channel-uuid-1
 
 **Endpoint:** `POST /channels/:channelId/members`
 
-**Description:** Add a user to a channel.
-
-**Path Parameters:**
-- `channelId` (required): Channel ID
+**Permission:** Any authenticated user
 
 **Request Body:**
 ```json
 {
-  "userId": "user-456",
+  "userId": "supabase-user-uuid",
   "role": "MEMBER"
 }
-```
-
-**Validation:**
-- `userId` (required, string): User ID to add
-- `role` (optional, string): Member role (default: `"MEMBER"`)
-
-**Response:** `201 Created`
-```json
-{
-  "id": "cm-uuid-2",
-  "channelId": "channel-uuid-1",
-  "userId": "user-456",
-  "role": "MEMBER",
-  "joinedAt": "2026-02-13T11:00:00.000Z"
-}
-```
-
-**cURL Example:**
-```bash
-curl -X POST http://localhost:3002/channels/channel-uuid-1/members \
-  -H "Content-Type: application/json" \
-  -d '{"userId": "user-456", "role": "MEMBER"}'
 ```
 
 ---
@@ -488,33 +461,19 @@ curl -X POST http://localhost:3002/channels/channel-uuid-1/members \
 
 **Endpoint:** `DELETE /channels/:channelId/members/:userId`
 
-**Description:** Remove a user from a channel.
-
-**Path Parameters:**
-- `channelId` (required): Channel ID
-- `userId` (required): User ID to remove
-
-**Response:** `200 OK`
-```json
-{
-  "count": 1
-}
-```
-
-**cURL Example:**
-```bash
-curl -X DELETE http://localhost:3002/channels/channel-uuid-1/members/user-456
-```
+**Permission:** Any authenticated user
 
 ---
 
-## 👥 Groups
+## 🔖 Groups
 
 ### Create Group
 
 **Endpoint:** `POST /groups`
 
-**Description:** Create a group within a channel.
+**Permission:** Must be a member of the parent channel
+
+**Description:** Creates a group within a channel. The creator is automatically added as a group member.
 
 **Request Body:**
 ```json
@@ -525,33 +484,9 @@ curl -X DELETE http://localhost:3002/channels/channel-uuid-1/members/user-456
 }
 ```
 
-**Validation:**
-- `channelId` (required, string): Parent channel ID
-- `name` (required, string): Group name
-- `description` (optional, string): Group description
-
-**Response:** `201 Created`
-```json
-{
-  "id": "group-uuid-1",
-  "channelId": "channel-uuid-1",
-  "name": "Developers",
-  "description": "Development team",
-  "createdAt": "2026-02-13T11:10:00.000Z",
-  "updatedAt": "2026-02-13T11:10:00.000Z"
-}
-```
-
-**cURL Example:**
-```bash
-curl -X POST http://localhost:3002/groups \
-  -H "Content-Type: application/json" \
-  -d '{
-    "channelId": "channel-uuid-1",
-    "name": "Developers",
-    "description": "Development team"
-  }'
-```
+**Errors:**
+- `403 Forbidden` — You must be a channel member to create a group
+- `404 Not Found` — Channel not found
 
 ---
 
@@ -559,10 +494,7 @@ curl -X POST http://localhost:3002/groups \
 
 **Endpoint:** `GET /groups/channel/:channelId`
 
-**Description:** Get all groups in a channel.
-
-**Path Parameters:**
-- `channelId` (required): Channel ID
+**Permission:** Any authenticated user
 
 **Response:** `200 OK`
 ```json
@@ -572,23 +504,18 @@ curl -X POST http://localhost:3002/groups \
     "channelId": "channel-uuid-1",
     "name": "Developers",
     "description": "Development team",
-    "createdAt": "2026-02-13T11:10:00.000Z",
-    "updatedAt": "2026-02-13T11:10:00.000Z",
+    "createdAt": "2026-03-01T14:10:00.000Z",
+    "updatedAt": "2026-03-01T14:10:00.000Z",
     "members": [
       {
         "id": "gm-uuid-1",
         "groupId": "group-uuid-1",
-        "userId": "user-123",
-        "joinedAt": "2026-02-13T11:10:00.000Z"
+        "userId": "supabase-user-uuid",
+        "joinedAt": "2026-03-01T14:10:00.000Z"
       }
     ]
   }
 ]
-```
-
-**cURL Example:**
-```bash
-curl http://localhost:3002/groups/channel/channel-uuid-1
 ```
 
 ---
@@ -597,31 +524,10 @@ curl http://localhost:3002/groups/channel/channel-uuid-1
 
 **Endpoint:** `GET /groups/:id`
 
-**Description:** Get a single group with members.
-
-**Path Parameters:**
-- `id` (required): Group ID
-
-**Response:** `200 OK`
-```json
-{
-  "id": "group-uuid-1",
-  "channelId": "channel-uuid-1",
-  "name": "Developers",
-  "description": "Development team",
-  "createdAt": "2026-02-13T11:10:00.000Z",
-  "updatedAt": "2026-02-13T11:10:00.000Z",
-  "members": [...]
-}
-```
+**Permission:** Any authenticated user
 
 **Errors:**
-- `404 Not Found` - Group not found
-
-**cURL Example:**
-```bash
-curl http://localhost:3002/groups/group-uuid-1
-```
+- `404 Not Found` — Group not found
 
 ---
 
@@ -629,10 +535,7 @@ curl http://localhost:3002/groups/group-uuid-1
 
 **Endpoint:** `PATCH /groups/:id`
 
-**Description:** Update group details.
-
-**Path Parameters:**
-- `id` (required): Group ID
+**Permission:** Channel `ADMIN`, Workspace `OWNER`, or Workspace `ADMIN`
 
 **Request Body:**
 ```json
@@ -642,27 +545,9 @@ curl http://localhost:3002/groups/group-uuid-1
 }
 ```
 
-**Response:** `200 OK`
-```json
-{
-  "id": "group-uuid-1",
-  "channelId": "channel-uuid-1",
-  "name": "Senior Developers",
-  "description": "Senior development team",
-  "createdAt": "2026-02-13T11:10:00.000Z",
-  "updatedAt": "2026-02-13T11:20:00.000Z"
-}
-```
-
 **Errors:**
-- `404 Not Found` - Group not found
-
-**cURL Example:**
-```bash
-curl -X PATCH http://localhost:3002/groups/group-uuid-1 \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Senior Developers"}'
-```
+- `403 Forbidden` — Insufficient permissions
+- `404 Not Found` — Group not found
 
 ---
 
@@ -670,30 +555,11 @@ curl -X PATCH http://localhost:3002/groups/group-uuid-1 \
 
 **Endpoint:** `DELETE /groups/:id`
 
-**Description:** Delete a group and all memberships.
-
-**Path Parameters:**
-- `id` (required): Group ID
-
-**Response:** `200 OK`
-```json
-{
-  "id": "group-uuid-1",
-  "channelId": "channel-uuid-1",
-  "name": "Developers",
-  "description": "Development team",
-  "createdAt": "2026-02-13T11:10:00.000Z",
-  "updatedAt": "2026-02-13T11:10:00.000Z"
-}
-```
+**Permission:** Channel `ADMIN`, Workspace `OWNER`, or Workspace `ADMIN`
 
 **Errors:**
-- `404 Not Found` - Group not found
-
-**cURL Example:**
-```bash
-curl -X DELETE http://localhost:3002/groups/group-uuid-1
-```
+- `403 Forbidden` — Insufficient permissions
+- `404 Not Found` — Group not found
 
 ---
 
@@ -701,36 +567,13 @@ curl -X DELETE http://localhost:3002/groups/group-uuid-1
 
 **Endpoint:** `POST /groups/:groupId/members`
 
-**Description:** Add a user to a group.
-
-**Path Parameters:**
-- `groupId` (required): Group ID
+**Permission:** Any authenticated user
 
 **Request Body:**
 ```json
 {
-  "userId": "user-789"
+  "userId": "supabase-user-uuid"
 }
-```
-
-**Validation:**
-- `userId` (required, string): User ID to add
-
-**Response:** `201 Created`
-```json
-{
-  "id": "gm-uuid-2",
-  "groupId": "group-uuid-1",
-  "userId": "user-789",
-  "joinedAt": "2026-02-13T11:25:00.000Z"
-}
-```
-
-**cURL Example:**
-```bash
-curl -X POST http://localhost:3002/groups/group-uuid-1/members \
-  -H "Content-Type: application/json" \
-  -d '{"userId": "user-789"}'
 ```
 
 ---
@@ -739,270 +582,62 @@ curl -X POST http://localhost:3002/groups/group-uuid-1/members \
 
 **Endpoint:** `DELETE /groups/:groupId/members/:userId`
 
-**Description:** Remove a user from a group.
+**Permission:** Any authenticated user
 
-**Path Parameters:**
-- `groupId` (required): Group ID
-- `userId` (required): User ID to remove
+---
 
-**Response:** `200 OK`
+## ❌ Error Responses
+
+All errors follow this format:
 ```json
 {
-  "count": 1
+  "statusCode": 401,
+  "message": "Missing or invalid Authorization header",
+  "error": "Unauthorized"
 }
 ```
 
-**cURL Example:**
-```bash
-curl -X DELETE http://localhost:3002/groups/group-uuid-1/members/user-789
-```
+| Status Code | Type | Description |
+|-------------|------|-------------|
+| `400` | Bad Request | Invalid input (validation failed) |
+| `401` | Unauthorized | Missing, invalid, or expired auth token |
+| `403` | Forbidden | Insufficient permissions (wrong role) |
+| `404` | Not Found | Resource does not exist |
+| `409` | Conflict | Duplicate resource (e.g. duplicate workspace slug) |
 
 ---
 
-## 👤 Workspace Members
+## 📊 Route Summary (25 endpoints)
 
-### Add Member to Workspace
-
-**Endpoint:** `POST /workspaces/:workspaceId/members`
-
-**Description:** Add a user to a workspace.
-
-**Path Parameters:**
-- `workspaceId` (required): Workspace ID
-
-**Request Body:**
-```json
-{
-  "userId": "user-456",
-  "role": "MEMBER"
-}
 ```
+GET    /                                              Health check (no auth)
 
-**Validation:**
-- `userId` (required, string): User ID to add
-- `role` (optional, string): Member role (default: `"MEMBER"`)
-  - Possible values: `"OWNER"`, `"ADMIN"`, `"MEMBER"`
+GET    /users/me                                      My profile
 
-**Response:** `201 Created`
-```json
-{
-  "id": "wm-uuid-2",
-  "workspaceId": "ws-uuid-123",
-  "userId": "user-456",
-  "role": "MEMBER",
-  "joinedAt": "2026-02-13T11:30:00.000Z"
-}
+POST   /workspaces                                    Create workspace
+GET    /workspaces                                    List my workspaces
+GET    /workspaces/:id                                Get workspace
+PATCH  /workspaces/:id                                Update workspace (OWNER/ADMIN)
+DELETE /workspaces/:id                                Delete workspace (OWNER)
+
+POST   /workspaces/:workspaceId/members               Add member
+GET    /workspaces/:workspaceId/members               List members
+PATCH  /workspaces/:workspaceId/members/:userId       Update role (OWNER/ADMIN)
+DELETE /workspaces/:workspaceId/members/:userId       Remove member (self/OWNER/ADMIN)
+
+POST   /channels                                      Create channel (workspace member)
+GET    /channels/workspace/:workspaceId               List channels
+GET    /channels/:id                                  Get channel
+PATCH  /channels/:id                                  Update (ch ADMIN / ws OWNER/ADMIN)
+DELETE /channels/:id                                  Delete (ch ADMIN / ws OWNER/ADMIN)
+POST   /channels/:channelId/members                   Add channel member
+DELETE /channels/:channelId/members/:userId           Remove channel member
+
+POST   /groups                                        Create group (channel member)
+GET    /groups/channel/:channelId                     List groups
+GET    /groups/:id                                    Get group
+PATCH  /groups/:id                                    Update (ch ADMIN / ws OWNER/ADMIN)
+DELETE /groups/:id                                    Delete (ch ADMIN / ws OWNER/ADMIN)
+POST   /groups/:groupId/members                       Add group member
+DELETE /groups/:groupId/members/:userId               Remove group member
 ```
-
-**cURL Example:**
-```bash
-curl -X POST http://localhost:3002/workspaces/ws-uuid-123/members \
-  -H "Content-Type: application/json" \
-  -d '{"userId": "user-456", "role": "MEMBER"}'
-```
-
----
-
-### List Workspace Members
-
-**Endpoint:** `GET /workspaces/:workspaceId/members`
-
-**Description:** Get all members in a workspace.
-
-**Path Parameters:**
-- `workspaceId` (required): Workspace ID
-
-**Response:** `200 OK`
-```json
-[
-  {
-    "id": "wm-uuid-1",
-    "workspaceId": "ws-uuid-123",
-    "userId": "user-123",
-    "role": "OWNER",
-    "joinedAt": "2026-02-13T10:30:00.000Z"
-  },
-  {
-    "id": "wm-uuid-2",
-    "workspaceId": "ws-uuid-123",
-    "userId": "user-456",
-    "role": "MEMBER",
-    "joinedAt": "2026-02-13T11:30:00.000Z"
-  }
-]
-```
-
-**cURL Example:**
-```bash
-curl http://localhost:3002/workspaces/ws-uuid-123/members
-```
-
----
-
-### Update Member Role
-
-**Endpoint:** `PATCH /workspaces/:workspaceId/members/:userId`
-
-**Description:** Update a member's role in the workspace.
-
-**Path Parameters:**
-- `workspaceId` (required): Workspace ID
-- `userId` (required): User ID
-
-**Request Body:**
-```json
-{
-  "role": "ADMIN"
-}
-```
-
-**Validation:**
-- `role` (required, string): New role
-  - Possible values: `"OWNER"`, `"ADMIN"`, `"MEMBER"`
-
-**Response:** `200 OK`
-```json
-{
-  "id": "wm-uuid-2",
-  "workspaceId": "ws-uuid-123",
-  "userId": "user-456",
-  "role": "ADMIN",
-  "joinedAt": "2026-02-13T11:30:00.000Z"
-}
-```
-
-**cURL Example:**
-```bash
-curl -X PATCH http://localhost:3002/workspaces/ws-uuid-123/members/user-456 \
-  -H "Content-Type: application/json" \
-  -d '{"role": "ADMIN"}'
-```
-
----
-
-### Remove Member from Workspace
-
-**Endpoint:** `DELETE /workspaces/:workspaceId/members/:userId`
-
-**Description:** Remove a user from a workspace.
-
-**Path Parameters:**
-- `workspaceId` (required): Workspace ID
-- `userId` (required): User ID to remove
-
-**Response:** `200 OK`
-```json
-{
-  "count": 1
-}
-```
-
-**cURL Example:**
-```bash
-curl -X DELETE http://localhost:3002/workspaces/ws-uuid-123/members/user-456
-```
-
----
-
-## 📊 Common Response Codes
-
-| Code | Status | Description |
-|------|--------|-------------|
-| `200` | OK | Successful GET, PATCH, DELETE |
-| `201` | Created | Successful POST (resource created) |
-| `204` | No Content | Successful DELETE (no body) |
-| `400` | Bad Request | Invalid input data / validation error |
-| `401` | Unauthorized | Authentication required (future) |
-| `403` | Forbidden | Insufficient permissions (future) |
-| `404` | Not Found | Resource doesn't exist |
-| `409` | Conflict | Duplicate resource (e.g., slug exists) |
-| `500` | Internal Server Error | Server error |
-
----
-
-## 🔐 Authentication
-
-**Note:** Authentication is not yet implemented. All endpoints are currently public.
-
-**Future implementation will include:**
-- JWT-based authentication
-- Authorization headers: `Authorization: Bearer <token>`
-- Role-based access control (RBAC)
-- Workspace ownership and permissions
-
----
-
-## 📝 Notes
-
-### Data Types
-
-- **UUID:** All IDs are UUIDs (e.g., `"550e8400-e29b-41d4-a716-446655440000"`)
-- **DateTime:** ISO 8601 format (e.g., `"2026-02-13T10:30:00.000Z"`)
-- **Enums:**
-  - Channel type: `"PUBLIC"`, `"PRIVATE"`
-  - Member roles: `"OWNER"`, `"ADMIN"`, `"MEMBER"`
-
-### Cascading Deletes
-
-- Deleting a **workspace** removes all channels, members, groups
-- Deleting a **channel** removes all channel members and groups
-- Deleting a **group** removes all group members
-
-### Unique Constraints
-
-- **Workspace slug** must be unique across all workspaces
-- **User + Workspace** combination must be unique (can't add same user twice)
-- **User + Channel** combination must be unique
-- **User + Group** combination must be unique
-
----
-
-## 🧪 Testing with cURL
-
-### Complete Workflow Example
-
-```bash
-# 1. Create workspace
-curl -X POST http://localhost:3002/workspaces \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Dev Team","slug":"dev-team","ownerId":"user-1"}'
-# Returns: {"id":"ws-123",...}
-
-# 2. Create channel
-curl -X POST http://localhost:3002/channels \
-  -H "Content-Type: application/json" \
-  -d '{"workspaceId":"ws-123","name":"general","type":"PUBLIC"}'
-# Returns: {"id":"ch-456",...}
-
-# 3. Add member to workspace
-curl -X POST http://localhost:3002/workspaces/ws-123/members \
-  -H "Content-Type: application/json" \
-  -d '{"userId":"user-2","role":"MEMBER"}'
-
-# 4. Add member to channel
-curl -X POST http://localhost:3002/channels/ch-456/members \
-  -H "Content-Type: application/json" \
-  -d '{"userId":"user-2"}'
-
-# 5. Create group
-curl -X POST http://localhost:3002/groups \
-  -H "Content-Type: application/json" \
-  -d '{"channelId":"ch-456","name":"Frontend Team"}'
-# Returns: {"id":"gr-789",...}
-
-# 6. Add member to group
-curl -X POST http://localhost:3002/groups/gr-789/members \
-  -H "Content-Type: application/json" \
-  -d '{"userId":"user-2"}'
-
-# 7. List everything
-curl http://localhost:3002/workspaces/ws-123
-curl http://localhost:3002/channels/workspace/ws-123
-curl http://localhost:3002/groups/channel/ch-456
-```
-
----
-
-**Last Updated:** February 13, 2026  
-**API Version:** 1.0.0  
-**Service:** Workspace Service (Port 3002)
