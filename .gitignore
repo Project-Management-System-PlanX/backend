@@ -11,3 +11,4 @@ uploads/
 *.swp
 *.swo
 .prisma/
+*.tsbuildinfo
