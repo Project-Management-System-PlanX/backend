@@ -21,6 +21,12 @@ export class ChannelsService {
             throw new ForbiddenException('You must be a workspace member to create a channel');
         }
 
+        const isDirectMessage = createChannelDto.type === 'DIRECT_MESSAGE';
+
+        if (!isDirectMessage && membership.role === 'MEMBER') {
+            throw new ForbiddenException('Only workspace owners and admins can create channels');
+        }
+
         const channel = await this.prisma.channel.create({
             data: createChannelDto,
         });
@@ -33,9 +39,15 @@ export class ChannelsService {
         return channel;
     }
 
-    async findByWorkspace(workspaceId: string) {
+    async findByWorkspace(workspaceId: string, userId: string) {
         return this.prisma.channel.findMany({
-            where: { workspaceId },
+            where: {
+                workspaceId,
+                OR: [
+                    { type: 'PUBLIC' },
+                    { members: { some: { userId } } },
+                ]
+            },
             include: {
                 members: true,
                 groups: true,
