@@ -20,6 +20,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  workspaceMembers WorkspaceMember[]
+
   @@map("users")
 }
 
@@ -46,6 +48,7 @@ model WorkspaceMember {
   joinedAt    DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [supabaseId])
 
   @@unique([workspaceId, userId])
   @@map("workspace_members")
