@@ -7,7 +7,7 @@
     "start:dev": "npm run build && nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
-    "build": "rm -rf dist && npx tsc -p tsconfig.json",
+    "build": "nest build",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
@@ -28,8 +28,9 @@
     "prisma": "^5.8.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "ts-node": "^10.9.2"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
 }

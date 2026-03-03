@@ -45,7 +45,14 @@ export class WorkspacesService {
         // Always return workspaces where the authenticated user is a member
         const memberships = await this.prisma.workspaceMember.findMany({
             where: { userId },
-            include: { workspace: true },
+            include: {
+                workspace: {
+                    include: {
+                        channels: true,
+                        members: true,
+                    }
+                }
+            },
         });
         return memberships.map((m) => m.workspace);
     }
