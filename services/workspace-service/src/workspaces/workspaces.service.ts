@@ -10,7 +10,7 @@ import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 
 @Injectable()
 export class WorkspacesService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async create(createWorkspaceDto: CreateWorkspaceDto, ownerId: string) {
         // Check if slug already exists
@@ -50,8 +50,8 @@ export class WorkspacesService {
                     include: {
                         channels: true,
                         members: true,
-                    }
-                }
+                    },
+                },
             },
         });
         return memberships.map((m) => m.workspace);

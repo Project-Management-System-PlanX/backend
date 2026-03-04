@@ -6,7 +6,7 @@ import { WorkspacesService } from './workspaces.service';
 
 @Controller('workspaces')
 export class WorkspacesController {
-    constructor(private readonly workspacesService: WorkspacesService) { }
+    constructor(private readonly workspacesService: WorkspacesService) {}
 
     @Post()
     create(@CurrentUser('userId') userId: string, @Body() createWorkspaceDto: CreateWorkspaceDto) {

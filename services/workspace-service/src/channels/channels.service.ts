@@ -1,4 +1,5 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 
@@ -27,6 +28,31 @@ export class ChannelsService {
             throw new ForbiddenException('Only workspace owners and admins can create channels');
         }
 
+        // For direct messages, prevent duplicates
+        if (isDirectMessage) {
+            const existingDM = await this.prisma.channel.findFirst({
+                where: {
+                    workspaceId: createChannelDto.workspaceId,
+                    type: 'DIRECT_MESSAGE',
+                    name: createChannelDto.name,
+                },
+                include: {
+                    members: true,
+                }
+            });
+
+            if (existingDM) {
+                // Return the existing DM channel; but ensure the creator is a member
+                const isMember = existingDM.members.some(m => m.userId === createdByUserId);
+                if (!isMember) {
+                    await this.prisma.channelMember.create({
+                        data: { channelId: existingDM.id, userId: createdByUserId, role: 'ADMIN' },
+                    });
+                }
+                return existingDM;
+            }
+        }
+
         const channel = await this.prisma.channel.create({
             data: createChannelDto,
         });
@@ -43,10 +69,7 @@ export class ChannelsService {
         return this.prisma.channel.findMany({
             where: {
                 workspaceId,
-                OR: [
-                    { type: 'PUBLIC' },
-                    { members: { some: { userId } } },
-                ]
+                OR: [{ type: 'PUBLIC' }, { members: { some: { userId } } }],
             },
             include: {
                 members: true,
@@ -94,13 +117,20 @@ export class ChannelsService {
     }
 
     async addMember(channelId: string, userId: string, role: string = 'MEMBER') {
-        return this.prisma.channelMember.create({
-            data: {
-                channelId,
-                userId,
-                role,
-            },
-        });
+        try {
+            return await this.prisma.channelMember.create({
+                data: {
+                    channelId,
+                    userId,
+                    role,
+                },
+            });
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                throw new ConflictException('User is already a member of this channel');
+            }
+            throw error;
+        }
     }
 
     async removeMember(channelId: string, userId: string) {

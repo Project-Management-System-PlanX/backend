@@ -5,7 +5,7 @@ import { CreateChannelDto } from './dto/create-channel.dto';
 
 @Controller('channels')
 export class ChannelsController {
-    constructor(private readonly channelsService: ChannelsService) { }
+    constructor(private readonly channelsService: ChannelsService) {}
 
     @Post()
     create(@CurrentUser('userId') userId: string, @Body() createChannelDto: CreateChannelDto) {
@@ -13,7 +13,10 @@ export class ChannelsController {
     }
 
     @Get('workspace/:workspaceId')
-    findByWorkspace(@Param('workspaceId') workspaceId: string, @CurrentUser('userId') userId: string) {
+    findByWorkspace(
+        @Param('workspaceId') workspaceId: string,
+        @CurrentUser('userId') userId: string,
+    ) {
         return this.channelsService.findByWorkspace(workspaceId, userId);
     }
 

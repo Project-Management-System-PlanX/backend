@@ -17,4 +17,4 @@ import { SupabaseAuthGuard } from './supabase-auth.guard';
     ],
     exports: [SupabaseAuthGuard],
 })
-export class SupabaseAuthModule { }
+export class SupabaseAuthModule {}

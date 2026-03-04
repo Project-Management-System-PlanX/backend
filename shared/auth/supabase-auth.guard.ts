@@ -35,7 +35,10 @@ export class SupabaseAuthGuard implements CanActivate {
         const token = authHeader.slice(7);
 
         try {
-            const { data: { user }, error } = await this.supabase.auth.getUser(token);
+            const {
+                data: { user },
+                error,
+            } = await this.supabase.auth.getUser(token);
 
             if (error || !user) {
                 throw new Error(error?.message || 'Invalid user');
@@ -43,7 +46,7 @@ export class SupabaseAuthGuard implements CanActivate {
 
             // Attach auth info to request for use in controllers
             (request as Request & { auth: { userId: string } }).auth = {
-                userId: user.id
+                userId: user.id,
             };
 
             this.logger.debug(`Authenticated user: ${user.id}`);

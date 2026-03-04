@@ -23,4 +23,4 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
         MembersModule,
     ],
 })
-export class AppModule { }
+export class AppModule {}
