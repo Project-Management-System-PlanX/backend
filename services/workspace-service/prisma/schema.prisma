@@ -36,8 +36,24 @@ model Workspace {
 
   members  WorkspaceMember[]
   channels Channel[]
+  invites  WorkspaceInvite[]
 
   @@map("workspaces")
+}
+
+model WorkspaceInvite {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  token       String   @unique @default(uuid())
+  createdBy   String   @map("created_by")
+  expiresAt   DateTime @map("expires_at")
+  maxUses     Int      @default(0) @map("max_uses")
+  useCount    Int      @default(0) @map("use_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("workspace_invites")
 }
 
 model WorkspaceMember {

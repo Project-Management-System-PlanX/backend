@@ -24,7 +24,8 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check --write .",
-    "clean": "rm -rf node_modules services/*/node_modules services/*/dist shared/*/node_modules"
+    "clean": "rm -rf node_modules services/*/node_modules services/*/dist shared/*/node_modules",
+    "prepare": "husky"
   },
   "dependencies": {
     "@biomejs/biome": "^2.3.15",
@@ -33,7 +34,9 @@
     "concurrently": "^8.2.2",
     "typescript": "^5.3.3"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "husky": "^9.1.7"
+  },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
