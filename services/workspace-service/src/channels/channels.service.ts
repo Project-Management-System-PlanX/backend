@@ -1,11 +1,16 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+    ConflictException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 
 @Injectable()
 export class ChannelsService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async create(createChannelDto: CreateChannelDto, createdByUserId: string) {
         // Verify the user is a member of the workspace
@@ -38,12 +43,12 @@ export class ChannelsService {
                 },
                 include: {
                     members: true,
-                }
+                },
             });
 
             if (existingDM) {
                 // Return the existing DM channel; but ensure the creator is a member
-                const isMember = existingDM.members.some(m => m.userId === createdByUserId);
+                const isMember = existingDM.members.some((m) => m.userId === createdByUserId);
                 if (!isMember) {
                     await this.prisma.channelMember.create({
                         data: { channelId: existingDM.id, userId: createdByUserId, role: 'ADMIN' },
