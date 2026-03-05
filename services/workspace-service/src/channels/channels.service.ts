@@ -31,7 +31,9 @@ export class ChannelsService {
         const canCreateChannel = ['OWNER', 'ADMIN'].includes(membership.role);
 
         if (!isDirectMessage && !canCreateChannel) {
-            throw new ForbiddenException(`Only workspace owners and admins can create channels. Your role: ${membership.role}`);
+            throw new ForbiddenException(
+                `Only workspace owners and admins can create channels. Your role: ${membership.role}`,
+            );
         }
 
         // For direct messages, prevent duplicates
@@ -49,7 +51,9 @@ export class ChannelsService {
 
             if (existingDM) {
                 // Return the existing DM channel; but ensure the creator is a member
-                const isMember = existingDM.channel_members.some((m) => m.userId === createdByUserId);
+                const isMember = existingDM.channel_members.some(
+                    (m) => m.userId === createdByUserId,
+                );
                 if (!isMember) {
                     await this.prisma.channel_members.create({
                         data: { channelId: existingDM.id, userId: createdByUserId, role: 'ADMIN' },

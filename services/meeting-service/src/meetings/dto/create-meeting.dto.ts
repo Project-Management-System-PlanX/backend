@@ -1,24 +1,24 @@
-import { IsString, IsNotEmpty, IsOptional, IsIn } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateMeetingDto {
-  @IsString()
-  @IsNotEmpty()
-  title: string;
+    @IsString()
+    @IsNotEmpty()
+    title: string;
 
-  @IsString()
-  @IsOptional()
-  groupId?: string;
+    @IsString()
+    @IsOptional()
+    groupId?: string;
 
-  @IsString()
-  @IsOptional()
-  channelId?: string;
+    @IsString()
+    @IsOptional()
+    channelId?: string;
 
-  @IsString()
-  @IsOptional()
-  workspaceId?: string;
+    @IsString()
+    @IsOptional()
+    workspaceId?: string;
 
-  @IsString()
-  @IsOptional()
-  @IsIn(['VIDEO', 'AUDIO'])
-  type?: 'VIDEO' | 'AUDIO';
+    @IsString()
+    @IsOptional()
+    @IsIn(['VIDEO', 'AUDIO'])
+    type?: 'VIDEO' | 'AUDIO';
 }

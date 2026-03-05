@@ -8,9 +8,9 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { IS_PUBLIC_KEY } from './public.decorator';
 import type { Request } from 'express';
 import { UsersService } from '../users/users.service';
+import { IS_PUBLIC_KEY } from './public.decorator';
 
 export interface AuthUser {
     userId: string; // Supabase user ID (auth.users.id)
