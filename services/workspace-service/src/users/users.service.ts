@@ -12,14 +12,14 @@ export interface SupabaseUserData {
 
 @Injectable()
 export class UsersService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) { }
 
     /**
      * Upsert a user from Supabase JWT claims.
      * Called automatically on every authenticated request by the auth guard.
      */
     async upsertFromSupabase(data: SupabaseUserData) {
-        return this.prisma.users.upsert({
+        return this.prisma.user.upsert({
             where: { supabaseId: data.supabaseId },
             create: {
                 supabaseId: data.supabaseId,
@@ -43,7 +43,7 @@ export class UsersService {
      * Get my profile by Supabase ID.
      */
     async getMe(supabaseId: string) {
-        return this.prisma.users.findUnique({
+        return this.prisma.user.findUnique({
             where: { supabaseId },
         });
     }
@@ -52,7 +52,7 @@ export class UsersService {
      * Get a user by their Supabase ID (used internally across other services).
      */
     async findBySupabaseId(supabaseId: string) {
-        return this.prisma.users.findUnique({
+        return this.prisma.user.findUnique({
             where: { supabaseId },
         });
     }

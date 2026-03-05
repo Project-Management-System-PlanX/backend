@@ -7,7 +7,7 @@ import { WorkspacesService } from './workspaces.service';
 
 @Controller('workspaces')
 export class WorkspacesController {
-    constructor(private readonly workspacesService: WorkspacesService) {}
+    constructor(private readonly workspacesService: WorkspacesService) { }
 
     @Post()
     create(@CurrentUser('userId') userId: string, @Body() createWorkspaceDto: CreateWorkspaceDto) {
@@ -17,6 +17,16 @@ export class WorkspacesController {
     @Get()
     findAll(@CurrentUser('userId') userId: string) {
         return this.workspacesService.findAll(userId);
+    }
+
+    @Get('all')
+    findAllAdmin() {
+        return this.workspacesService.findAllAdmin();
+    }
+
+    @Patch(':id/transfer')
+    transferOwnership(@Param('id') id: string, @Body() body: { newOwnerId: string }) {
+        return this.workspacesService.transferOwnership(id, body.newOwnerId);
     }
 
     // Invite routes MUST come before :id routes to avoid route conflicts

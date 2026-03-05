@@ -10,11 +10,11 @@ import { CreateChannelDto } from './dto/create-channel.dto';
 
 @Injectable()
 export class ChannelsService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) { }
 
     async create(createChannelDto: CreateChannelDto, createdByUserId: string) {
         // Verify the user is a member of the workspace
-        const membership = await this.prisma.workspace_members.findUnique({
+        const membership = await this.prisma.workspaceMember.findUnique({
             where: {
                 workspaceId_userId: {
                     workspaceId: createChannelDto.workspaceId,
@@ -38,24 +38,24 @@ export class ChannelsService {
 
         // For direct messages, prevent duplicates
         if (isDirectMessage) {
-            const existingDM = await this.prisma.channels.findFirst({
+            const existingDM = await this.prisma.channel.findFirst({
                 where: {
                     workspaceId: createChannelDto.workspaceId,
                     type: 'DIRECT_MESSAGE',
                     name: createChannelDto.name,
                 },
                 include: {
-                    channel_members: true,
+                    members: true,
                 },
             });
 
             if (existingDM) {
                 // Return the existing DM channel; but ensure the creator is a member
-                const isMember = existingDM.channel_members.some(
+                const isMember = existingDM.members.some(
                     (m) => m.userId === createdByUserId,
                 );
                 if (!isMember) {
-                    await this.prisma.channel_members.create({
+                    await this.prisma.channelMember.create({
                         data: { channelId: existingDM.id, userId: createdByUserId, role: 'ADMIN' },
                     });
                 }
@@ -63,12 +63,12 @@ export class ChannelsService {
             }
         }
 
-        const channel = await this.prisma.channels.create({
+        const channel = await this.prisma.channel.create({
             data: createChannelDto,
         });
 
         // Auto-join creator as channel ADMIN
-        await this.prisma.channel_members.create({
+        await this.prisma.channelMember.create({
             data: { channelId: channel.id, userId: createdByUserId, role: 'ADMIN' },
         });
 
@@ -76,13 +76,13 @@ export class ChannelsService {
     }
 
     async findByWorkspace(workspaceId: string, userId: string) {
-        return this.prisma.channels.findMany({
+        return this.prisma.channel.findMany({
             where: {
                 workspaceId,
-                OR: [{ type: 'PUBLIC' }, { channel_members: { some: { userId } } }],
+                OR: [{ type: 'PUBLIC' }, { members: { some: { userId } } }],
             },
             include: {
-                channel_members: true,
+                members: true,
                 groups: true,
             },
             orderBy: { createdAt: 'asc' },
@@ -90,10 +90,10 @@ export class ChannelsService {
     }
 
     async findOne(id: string) {
-        const channel = await this.prisma.channels.findUnique({
+        const channel = await this.prisma.channel.findUnique({
             where: { id },
             include: {
-                channel_members: true,
+                members: true,
                 groups: true,
             },
         });
@@ -106,29 +106,29 @@ export class ChannelsService {
     }
 
     async update(id: string, updateData: Partial<CreateChannelDto>, userId: string) {
-        const channel = await this.prisma.channels.findUnique({ where: { id } });
+        const channel = await this.prisma.channel.findUnique({ where: { id } });
         if (!channel) throw new NotFoundException('Channel not found');
 
         await this.assertChannelPermission(channel.id, channel.workspaceId, userId);
 
-        return this.prisma.channels.update({
+        return this.prisma.channel.update({
             where: { id },
             data: updateData,
         });
     }
 
     async remove(id: string, userId: string) {
-        const channel = await this.prisma.channels.findUnique({ where: { id } });
+        const channel = await this.prisma.channel.findUnique({ where: { id } });
         if (!channel) throw new NotFoundException('Channel not found');
 
         await this.assertChannelPermission(channel.id, channel.workspaceId, userId);
 
-        return this.prisma.channels.delete({ where: { id } });
+        return this.prisma.channel.delete({ where: { id } });
     }
 
     async addMember(channelId: string, userId: string, role: string = 'MEMBER') {
         try {
-            return await this.prisma.channel_members.create({
+            return await this.prisma.channelMember.create({
                 data: {
                     channelId,
                     userId,
@@ -144,7 +144,7 @@ export class ChannelsService {
     }
 
     async removeMember(channelId: string, userId: string) {
-        return this.prisma.channel_members.deleteMany({
+        return this.prisma.channelMember.deleteMany({
             where: {
                 channelId,
                 userId,
@@ -162,14 +162,14 @@ export class ChannelsService {
         userId: string,
     ): Promise<void> {
         // Check if user is a channel ADMIN
-        const channelMember = await this.prisma.channel_members.findUnique({
+        const channelMember = await this.prisma.channelMember.findUnique({
             where: { channelId_userId: { channelId, userId } },
         });
 
         if (channelMember?.role === 'ADMIN') return;
 
         // Check if user is a workspace OWNER or ADMIN
-        const workspaceMember = await this.prisma.workspace_members.findUnique({
+        const workspaceMember = await this.prisma.workspaceMember.findUnique({
             where: { workspaceId_userId: { workspaceId, userId } },
         });
 

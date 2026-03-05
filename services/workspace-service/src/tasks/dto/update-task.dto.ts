@@ -6,6 +6,14 @@ import { IsArray, IsOptional, IsString } from 'class-validator';
 export class UpdateTaskDto extends PartialType(
     OmitType(CreateTaskDto, ['spaceId'] as const)
 ) {
+    title?: string;
+    description?: string;
+    priority?: string;
+    assigneeId?: string;
+    dueDate?: string;
+    position?: number;
+    statusId?: string;
+
     @IsString()
     @IsOptional()
     resolution?: string; // UNRESOLVED, DONE, WONT_DO, DUPLICATE

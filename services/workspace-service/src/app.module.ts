@@ -9,6 +9,12 @@ import { UsersModule } from './users/users.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { SpacesModule } from './spaces/spaces.module';
 import { TasksModule } from './tasks/tasks.module';
+import { TeamsService } from './teams/teams.service';
+import { TeamsController } from './teams/teams.controller';
+import { TeamsModule } from './teams/teams.module';
+import { TicketsService } from './tickets/tickets.service';
+import { TicketsController } from './tickets/tickets.controller';
+import { TicketsModule } from './tickets/tickets.module';
 
 @Module({
     imports: [
@@ -25,6 +31,10 @@ import { TasksModule } from './tasks/tasks.module';
         MembersModule,
         SpacesModule,
         TasksModule,
+        TeamsModule,
+        TicketsModule,
     ],
+    providers: [TeamsService, TicketsService],
+    controllers: [TeamsController, TicketsController],
 })
 export class AppModule { }
