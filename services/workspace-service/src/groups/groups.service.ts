@@ -8,7 +8,7 @@ export class GroupsService {
 
     async create(createGroupDto: CreateGroupDto, createdByUserId: string) {
         // Verify channel exists and user is a channel member
-        const channel = await this.prisma.channel.findUnique({
+        const channel = await this.prisma.channels.findUnique({
             where: { id: createGroupDto.channelId },
         });
 
@@ -16,7 +16,7 @@ export class GroupsService {
             throw new NotFoundException('Channel not found');
         }
 
-        const channelMember = await this.prisma.channelMember.findUnique({
+        const channelMember = await this.prisma.channel_members.findUnique({
             where: {
                 channelId_userId: {
                     channelId: createGroupDto.channelId,
@@ -29,12 +29,12 @@ export class GroupsService {
             throw new ForbiddenException('You must be a channel member to create a group');
         }
 
-        const group = await this.prisma.group.create({
+        const group = await this.prisma.groups.create({
             data: createGroupDto,
         });
 
         // Auto-join creator as group member
-        await this.prisma.groupMember.create({
+        await this.prisma.group_members.create({
             data: { groupId: group.id, userId: createdByUserId },
         });
 
@@ -42,17 +42,17 @@ export class GroupsService {
     }
 
     async findByChannel(channelId: string) {
-        return this.prisma.group.findMany({
+        return this.prisma.groups.findMany({
             where: { channelId },
-            include: { members: true },
+            include: { group_members: true },
             orderBy: { createdAt: 'asc' },
         });
     }
 
     async findOne(id: string) {
-        const group = await this.prisma.group.findUnique({
+        const group = await this.prisma.groups.findUnique({
             where: { id },
-            include: { members: true },
+            include: { group_members: true },
         });
 
         if (!group) {
@@ -63,34 +63,34 @@ export class GroupsService {
     }
 
     async update(id: string, updateData: Partial<CreateGroupDto>, userId: string) {
-        const group = await this.prisma.group.findUnique({
+        const group = await this.prisma.groups.findUnique({
             where: { id },
-            include: { channel: true },
+            include: { channels: true },
         });
         if (!group) throw new NotFoundException('Group not found');
 
-        await this.assertGroupPermission(group.channelId, group.channel.workspaceId, userId);
+        await this.assertGroupPermission(group.channelId, group.channels.workspaceId, userId);
 
-        return this.prisma.group.update({
+        return this.prisma.groups.update({
             where: { id },
             data: updateData,
         });
     }
 
     async remove(id: string, userId: string) {
-        const group = await this.prisma.group.findUnique({
+        const group = await this.prisma.groups.findUnique({
             where: { id },
-            include: { channel: true },
+            include: { channels: true },
         });
         if (!group) throw new NotFoundException('Group not found');
 
-        await this.assertGroupPermission(group.channelId, group.channel.workspaceId, userId);
+        await this.assertGroupPermission(group.channelId, group.channels.workspaceId, userId);
 
-        return this.prisma.group.delete({ where: { id } });
+        return this.prisma.groups.delete({ where: { id } });
     }
 
     async addMember(groupId: string, userId: string) {
-        return this.prisma.groupMember.create({
+        return this.prisma.group_members.create({
             data: {
                 groupId,
                 userId,
@@ -99,7 +99,7 @@ export class GroupsService {
     }
 
     async removeMember(groupId: string, userId: string) {
-        return this.prisma.groupMember.deleteMany({
+        return this.prisma.group_members.deleteMany({
             where: {
                 groupId,
                 userId,
@@ -117,14 +117,14 @@ export class GroupsService {
         userId: string,
     ): Promise<void> {
         // Check if user is a channel ADMIN
-        const channelMember = await this.prisma.channelMember.findUnique({
+        const channelMember = await this.prisma.channel_members.findUnique({
             where: { channelId_userId: { channelId, userId } },
         });
 
         if (channelMember?.role === 'ADMIN') return;
 
         // Check if user is a workspace OWNER or ADMIN
-        const workspaceMember = await this.prisma.workspaceMember.findUnique({
+        const workspaceMember = await this.prisma.workspace_members.findUnique({
             where: { workspaceId_userId: { workspaceId, userId } },
         });
 

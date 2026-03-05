@@ -21,7 +21,7 @@ export class UsersService {
      * Called automatically on every authenticated request by the auth guard.
      */
     async upsertFromSupabase(data: SupabaseUserData) {
-        return this.prisma.user.upsert({
+        return this.prisma.users.upsert({
             where: { supabaseId: data.supabaseId },
             create: {
                 supabaseId: data.supabaseId,
@@ -45,7 +45,7 @@ export class UsersService {
      * Get my profile by Supabase ID.
      */
     async getMe(supabaseId: string) {
-        return this.prisma.user.findUnique({
+        return this.prisma.users.findUnique({
             where: { supabaseId },
         });
     }
@@ -54,7 +54,7 @@ export class UsersService {
      * Get a user by their Supabase ID (used internally across other services).
      */
     async findBySupabaseId(supabaseId: string) {
-        return this.prisma.user.findUnique({
+        return this.prisma.users.findUnique({
             where: { supabaseId },
         });
     }

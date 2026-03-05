@@ -14,7 +14,7 @@ export class WorkspacesService {
 
     async create(createWorkspaceDto: CreateWorkspaceDto, ownerId: string) {
         // Check if slug already exists
-        const existing = await this.prisma.workspace.findUnique({
+        const existing = await this.prisma.workspaces.findUnique({
             where: { slug: createWorkspaceDto.slug },
         });
 
@@ -22,7 +22,7 @@ export class WorkspacesService {
             throw new ConflictException('Workspace with this slug already exists');
         }
 
-        const workspace = await this.prisma.workspace.create({
+        const workspace = await this.prisma.workspaces.create({
             data: {
                 ...createWorkspaceDto,
                 ownerId, // Injected from Supabase auth — never from request body
@@ -30,7 +30,7 @@ export class WorkspacesService {
         });
 
         // Add owner as a member automatically
-        await this.prisma.workspaceMember.create({
+        const ownerMember = await this.prisma.workspace_members.create({
             data: {
                 workspaceId: workspace.id,
                 userId: ownerId,
@@ -38,30 +38,40 @@ export class WorkspacesService {
             },
         });
 
-        return workspace;
+        return {
+            ...workspace,
+            members: [ownerMember],
+            channels: [],
+        };
     }
 
     async findAll(userId: string) {
         // Always return workspaces where the authenticated user is a member
-        const memberships = await this.prisma.workspaceMember.findMany({
+        const memberships = await this.prisma.workspace_members.findMany({
             where: { userId },
             include: {
-                workspace: {
+                workspaces: {
                     include: {
                         channels: true,
-                        members: true,
+                        workspace_members: true,
                     },
                 },
             },
         });
-        return memberships.map((m) => m.workspace);
+        return memberships.map((m) => {
+            const ws = m.workspaces;
+            return {
+                ...ws,
+                members: ws.workspace_members,
+            };
+        });
     }
 
     async findOne(id: string) {
-        const workspace = await this.prisma.workspace.findUnique({
+        const workspace = await this.prisma.workspaces.findUnique({
             where: { id },
             include: {
-                members: true,
+                workspace_members: true,
                 channels: true,
             },
         });
@@ -70,29 +80,32 @@ export class WorkspacesService {
             throw new NotFoundException('Workspace not found');
         }
 
-        return workspace;
+        return {
+            ...workspace,
+            members: workspace.workspace_members,
+        };
     }
 
     async update(id: string, updateWorkspaceDto: UpdateWorkspaceDto, userId: string) {
-        const workspace = await this.prisma.workspace.findUnique({ where: { id } });
+        const workspace = await this.prisma.workspaces.findUnique({ where: { id } });
         if (!workspace) throw new NotFoundException('Workspace not found');
 
         // Only OWNER or ADMIN can update
-        const member = await this.prisma.workspaceMember.findUnique({
+        const member = await this.prisma.workspace_members.findUnique({
             where: { workspaceId_userId: { workspaceId: id, userId } },
         });
         if (!member || !['OWNER', 'ADMIN'].includes(member.role)) {
             throw new ForbiddenException('Insufficient permissions to update workspace');
         }
 
-        return this.prisma.workspace.update({
+        return this.prisma.workspaces.update({
             where: { id },
             data: updateWorkspaceDto,
         });
     }
 
     async remove(id: string, userId: string) {
-        const workspace = await this.prisma.workspace.findUnique({ where: { id } });
+        const workspace = await this.prisma.workspaces.findUnique({ where: { id } });
         if (!workspace) throw new NotFoundException('Workspace not found');
 
         // Only OWNER can delete
@@ -100,6 +113,75 @@ export class WorkspacesService {
             throw new ForbiddenException('Only the workspace owner can delete it');
         }
 
-        return this.prisma.workspace.delete({ where: { id } });
+        return this.prisma.workspaces.delete({ where: { id } });
+    }
+
+    async createInvite(workspaceId: string, userId: string) {
+        // Verify user is OWNER or ADMIN
+        const member = await this.prisma.workspace_members.findUnique({
+            where: { workspaceId_userId: { workspaceId, userId } },
+        });
+        if (!member || !['OWNER', 'ADMIN'].includes(member.role)) {
+            throw new ForbiddenException('Only owners and admins can create invite links');
+        }
+
+        const invite = await this.prisma.workspace_invites.create({
+            data: {
+                workspace_id: workspaceId,
+                created_by: userId,
+            },
+        });
+
+        return invite;
+    }
+
+    async getInvite(token: string) {
+        const invite = await this.prisma.workspace_invites.findUnique({
+            where: { token },
+            include: { workspaces: true },
+        });
+
+        if (!invite) {
+            throw new NotFoundException('Invite not found or expired');
+        }
+
+        return invite;
+    }
+
+    async acceptInvite(token: string, userId: string) {
+        const invite = await this.prisma.workspace_invites.findUnique({
+            where: { token },
+            include: { workspaces: true },
+        });
+
+        if (!invite) {
+            throw new NotFoundException('Invite not found or expired');
+        }
+
+        // Check if already a member
+        const existingMember = await this.prisma.workspace_members.findUnique({
+            where: { workspaceId_userId: { workspaceId: invite.workspace_id, userId } },
+        });
+
+        if (existingMember) {
+            return { workspace: invite.workspaces, alreadyMember: true };
+        }
+
+        // Add as member
+        await this.prisma.workspace_members.create({
+            data: {
+                workspaceId: invite.workspace_id,
+                userId,
+                role: 'MEMBER',
+            },
+        });
+
+        // Increment use count
+        await this.prisma.workspace_invites.update({
+            where: { token },
+            data: { use_count: { increment: 1 } },
+        });
+
+        return { workspace: invite.workspaces, alreadyMember: false };
     }
 }

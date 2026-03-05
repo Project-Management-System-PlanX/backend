@@ -13,7 +13,7 @@ export class MembersService {
 
     async addMember(workspaceId: string, userId: string, role: string = 'MEMBER') {
         try {
-            return await this.prisma.workspaceMember.create({
+            return await this.prisma.workspace_members.create({
                 data: {
                     workspaceId,
                     userId,
@@ -29,10 +29,10 @@ export class MembersService {
     }
 
     async findByWorkspace(workspaceId: string) {
-        return this.prisma.workspaceMember.findMany({
+        return this.prisma.workspace_members.findMany({
             where: { workspaceId },
             include: {
-                user: {
+                users: {
                     select: {
                         id: true,
                         supabaseId: true,
@@ -50,14 +50,14 @@ export class MembersService {
 
     async updateRole(workspaceId: string, userId: string, role: string, requesterId: string) {
         // Only OWNER/ADMIN can update roles
-        const requester = await this.prisma.workspaceMember.findFirst({
+        const requester = await this.prisma.workspace_members.findFirst({
             where: { workspaceId, userId: requesterId },
         });
         if (!requester || !['OWNER', 'ADMIN'].includes(requester.role)) {
             throw new ForbiddenException('Insufficient permissions to update member role');
         }
 
-        const member = await this.prisma.workspaceMember.findFirst({
+        const member = await this.prisma.workspace_members.findFirst({
             where: { workspaceId, userId },
         });
 
@@ -65,7 +65,7 @@ export class MembersService {
             throw new NotFoundException('Member not found');
         }
 
-        return this.prisma.workspaceMember.update({
+        return this.prisma.workspace_members.update({
             where: { id: member.id },
             data: { role },
         });
@@ -73,7 +73,7 @@ export class MembersService {
 
     async removeMember(workspaceId: string, userId: string, requesterId: string) {
         // Members can remove themselves; OWNER/ADMIN can remove anyone
-        const requester = await this.prisma.workspaceMember.findFirst({
+        const requester = await this.prisma.workspace_members.findFirst({
             where: { workspaceId, userId: requesterId },
         });
 
@@ -86,7 +86,7 @@ export class MembersService {
             throw new ForbiddenException('Insufficient permissions to remove this member');
         }
 
-        return this.prisma.workspaceMember.deleteMany({
+        return this.prisma.workspace_members.deleteMany({
             where: { workspaceId, userId },
         });
     }

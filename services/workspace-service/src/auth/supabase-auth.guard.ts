@@ -6,7 +6,9 @@ import {
     UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Reflector } from '@nestjs/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { IS_PUBLIC_KEY } from './public.decorator';
 import type { Request } from 'express';
 import { UsersService } from '../users/users.service';
 
@@ -27,6 +29,7 @@ export class SupabaseAuthGuard implements CanActivate {
     constructor(
         private readonly configService: ConfigService,
         private readonly usersService: UsersService,
+        private readonly reflector: Reflector,
     ) {
         const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
         const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
@@ -39,6 +42,13 @@ export class SupabaseAuthGuard implements CanActivate {
     }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
+        // Skip auth for routes decorated with @Public()
+        const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+        if (isPublic) return true;
+
         const request = context.switchToHttp().getRequest<Request>();
         const authHeader = request.headers.authorization;
 

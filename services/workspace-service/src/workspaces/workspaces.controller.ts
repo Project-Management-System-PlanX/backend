@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { Public } from '../auth/public.decorator';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { WorkspacesService } from './workspaces.service';
@@ -16,6 +17,18 @@ export class WorkspacesController {
     @Get()
     findAll(@CurrentUser('userId') userId: string) {
         return this.workspacesService.findAll(userId);
+    }
+
+    // Invite routes MUST come before :id routes to avoid route conflicts
+    @Public()
+    @Get('invite/:token')
+    getInvite(@Param('token') token: string) {
+        return this.workspacesService.getInvite(token);
+    }
+
+    @Post('invite/:token/accept')
+    acceptInvite(@Param('token') token: string, @CurrentUser('userId') userId: string) {
+        return this.workspacesService.acceptInvite(token, userId);
     }
 
     @Get(':id')
@@ -35,5 +48,10 @@ export class WorkspacesController {
     @Delete(':id')
     remove(@Param('id') id: string, @CurrentUser('userId') userId: string) {
         return this.workspacesService.remove(id, userId);
+    }
+
+    @Post(':id/invite')
+    createInvite(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+        return this.workspacesService.createInvite(id, userId);
     }
 }
