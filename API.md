@@ -607,7 +607,7 @@ All errors follow this format:
 
 ---
 
-## 📊 Route Summary (25 endpoints)
+## 📊 Route Summary (42 endpoints)
 
 ```
 GET    /                                              Health check (no auth)
@@ -640,4 +640,24 @@ PATCH  /groups/:id                                    Update (ch ADMIN / ws OWNE
 DELETE /groups/:id                                    Delete (ch ADMIN / ws OWNER/ADMIN)
 POST   /groups/:groupId/members                       Add group member
 DELETE /groups/:groupId/members/:userId               Remove group member
+
+POST   /spaces                                        Create space
+GET    /spaces/workspace/:workspaceId                 List spaces
+GET    /spaces/:id                                    Get space
+PATCH  /spaces/:id                                    Update space
+DELETE /spaces/:id                                    Delete space
+POST   /spaces/:spaceId/statuses                      Add custom status
+PATCH  /spaces/:spaceId/statuses/:statusId            Update custom status
+DELETE /spaces/:spaceId/statuses/:statusId            Delete custom status
+
+POST   /tasks                                         Create task
+GET    /tasks/space/:spaceId                          List tasks in space (filters: status, assignee, priority)
+GET    /tasks/assigned-to-me                          List tasks assigned to current user
+GET    /tasks/:id                                     Get task
+PATCH  /tasks/:id                                     Update task
+PATCH  /tasks/:id/move                                Move task to different status/position
+DELETE /tasks/:id                                     Delete task
+POST   /tasks/:taskId/comments                        Add comment
+GET    /tasks/:taskId/comments                        List comments
+DELETE /tasks/:taskId/comments/:commentId             Delete comment
 ```
