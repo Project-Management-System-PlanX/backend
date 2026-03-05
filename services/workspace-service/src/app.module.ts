@@ -7,6 +7,8 @@ import { MembersModule } from './members/members.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
+import { SpacesModule } from './spaces/spaces.module';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
     imports: [
@@ -21,6 +23,8 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
         ChannelsModule,
         GroupsModule,
         MembersModule,
+        SpacesModule,
+        TasksModule,
     ],
 })
-export class AppModule {}
+export class AppModule { }

@@ -10,17 +10,18 @@ datasource db {
 
 // User profile — synced from Supabase on first login and kept up-to-date
 model User {
-  id        String   @id @default(uuid())
+  id         String   @id @default(uuid())
   supabaseId String   @unique // Supabase user ID (auth.users.id)
-  email     String   @unique
-  firstName String?
-  lastName  String?
-  username  String?
-  imageUrl  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  email      String   @unique
+  firstName  String?
+  lastName   String?
+  username   String?
+  imageUrl   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   workspaceMembers WorkspaceMember[]
+  messages         Message[]
 
   @@map("users")
 }
@@ -37,21 +38,22 @@ model Workspace {
   members  WorkspaceMember[]
   channels Channel[]
   invites  WorkspaceInvite[]
+  spaces   Space[]
 
   @@map("workspaces")
 }
 
 model WorkspaceInvite {
-  id          String   @id @default(uuid())
+  id          String   @id @default(dbgenerated("(gen_random_uuid())::text"))
   workspaceId String   @map("workspace_id")
-  token       String   @unique @default(uuid())
+  token       String   @unique @default(dbgenerated("(gen_random_uuid())::text"))
   createdBy   String   @map("created_by")
-  expiresAt   DateTime @map("expires_at")
+  expiresAt   DateTime @default(dbgenerated("(now() + '7 days'::interval)")) @map("expires_at") @db.Timestamp(6)
   maxUses     Int      @default(0) @map("max_uses")
   useCount    Int      @default(0) @map("use_count")
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("workspace_invites")
 }
@@ -82,6 +84,7 @@ model Channel {
   workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   members   ChannelMember[]
   groups    Group[]
+  messages  Message[]
 
   @@map("channels")
 }
@@ -123,4 +126,114 @@ model GroupMember {
 
   @@unique([groupId, userId])
   @@map("group_members")
+}
+
+// Messages — managed via Supabase Realtime, but tracked here for relations
+model Message {
+  id        String   @id
+  channelId String   @map("channel_id")
+  userId    String   @map("user_id")
+  content   String
+  isEdited  Boolean  @default(false) @map("is_edited")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @map("updated_at")
+  fileUrl   String?  @map("file_url")
+  fileName  String?  @map("file_name")
+  fileType  String?  @map("file_type")
+  fileSize  Int?     @map("file_size")
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+// ─── Space (Project container within a workspace) ───
+model Space {
+  id          String   @id @default(uuid())
+  workspaceId String
+  name        String
+  description String?
+  color       String   @default("#0B6E4F") // sidebar icon color
+  icon        String   @default("📋") // emoji icon
+  prefix      String // e.g. "KAN", "SAM1" for task IDs
+  taskCounter Int      @default(0) // tracks next task number
+  createdBy   String // supabaseId of creator
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+  statuses  TaskStatus[]
+
+  @@unique([workspaceId, prefix])
+  @@map("spaces")
+}
+
+// ─── Task Status (Board columns — configurable per space) ───
+model TaskStatus {
+  id       String  @id @default(uuid())
+  spaceId  String
+  name     String // "To Do", "In Progress", "In Review", "Done"
+  color    String  @default("#94A3B8")
+  position Int     @default(0)
+  isDone   Boolean @default(false) // marks "completed" columns
+
+  space Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@unique([spaceId, name])
+  @@map("task_statuses")
+}
+
+// ─── Task (Core entity) ───
+model Task {
+  id          String    @id @default(uuid())
+  spaceId     String
+  statusId    String
+  title       String
+  description String?
+  taskNumber  Int // auto-incremented per space
+  priority    String    @default("NONE") // CRITICAL, HIGH, MEDIUM, LOW, NONE
+  assigneeId  String? // supabaseId of assigned user (nullable)
+  reporterId  String // supabaseId of creator
+  dueDate     DateTime?
+  resolution  String    @default("UNRESOLVED") // UNRESOLVED, DONE, WONT_DO, DUPLICATE
+  position    Int       @default(0) // ordering within a status column
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  space    Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  status   TaskStatus    @relation(fields: [statusId], references: [id])
+  labels   TaskLabel[]
+  comments TaskComment[]
+
+  @@unique([spaceId, taskNumber])
+  @@map("tasks")
+}
+
+// ─── Task Label (Tags on tasks, e.g. "Frontend", "Research") ───
+model TaskLabel {
+  id     String @id @default(uuid())
+  taskId String
+  name   String
+  color  String @default("#94A3B8")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_labels")
+}
+
+// ─── Task Comment ───
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String // supabaseId of commenter
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_comments")
 }
