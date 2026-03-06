@@ -79,7 +79,12 @@ export class ChannelsService {
         return this.prisma.channel.findMany({
             where: {
                 workspaceId,
-                OR: [{ type: 'PUBLIC' }, { members: { some: { userId } } }],
+                OR: [
+                    { type: 'PUBLIC' },
+                    { type: 'COMPANY-WIDE' },
+                    { type: 'PRIVATE', members: { some: { userId } } },
+                    { type: 'DIRECT_MESSAGE', members: { some: { userId } } }
+                ],
             },
             include: {
                 members: true,
