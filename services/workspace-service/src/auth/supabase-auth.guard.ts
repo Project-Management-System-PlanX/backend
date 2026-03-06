@@ -6,9 +6,11 @@ import {
     UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Reflector } from '@nestjs/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Request } from 'express';
 import { UsersService } from '../users/users.service';
+import { IS_PUBLIC_KEY } from './public.decorator';
 
 export interface AuthUser {
     userId: string; // Supabase user ID (auth.users.id)
@@ -27,6 +29,7 @@ export class SupabaseAuthGuard implements CanActivate {
     constructor(
         private readonly configService: ConfigService,
         private readonly usersService: UsersService,
+        private readonly reflector: Reflector,
     ) {
         const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
         const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
@@ -39,6 +42,13 @@ export class SupabaseAuthGuard implements CanActivate {
     }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
+        // Skip auth for routes decorated with @Public()
+        const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+        if (isPublic) return true;
+
         const request = context.switchToHttp().getRequest<Request>();
         const authHeader = request.headers.authorization;
 
@@ -62,10 +72,10 @@ export class SupabaseAuthGuard implements CanActivate {
             const authUser: AuthUser = {
                 userId: user.id,
                 email: user.email || '',
-                firstName: user.user_metadata?.first_name,
-                lastName: user.user_metadata?.last_name,
+                firstName: user.user_metadata?.first_name || user.user_metadata?.full_name?.split(' ')[0],
+                lastName: user.user_metadata?.last_name || user.user_metadata?.full_name?.split(' ').slice(1).join(' '),
                 username: user.user_metadata?.username,
-                imageUrl: user.user_metadata?.avatar_url,
+                imageUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
             };
 
             // Attach to request for @CurrentUser() decorator

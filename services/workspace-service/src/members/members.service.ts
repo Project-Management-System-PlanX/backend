@@ -1,4 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+    ConflictException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -6,18 +12,38 @@ export class MembersService {
     constructor(private readonly prisma: PrismaService) { }
 
     async addMember(workspaceId: string, userId: string, role: string = 'MEMBER') {
-        return this.prisma.workspaceMember.create({
-            data: {
-                workspaceId,
-                userId,
-                role,
-            },
-        });
+        try {
+            return await this.prisma.workspaceMember.create({
+                data: {
+                    workspaceId,
+                    userId,
+                    role,
+                },
+            });
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                throw new ConflictException('User is already a member of this workspace');
+            }
+            throw error;
+        }
     }
 
     async findByWorkspace(workspaceId: string) {
         return this.prisma.workspaceMember.findMany({
             where: { workspaceId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        supabaseId: true,
+                        email: true,
+                        firstName: true,
+                        lastName: true,
+                        username: true,
+                        imageUrl: true,
+                    },
+                },
+            },
             orderBy: { joinedAt: 'asc' },
         });
     }

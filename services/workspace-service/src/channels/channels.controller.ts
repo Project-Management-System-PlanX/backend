@@ -13,8 +13,11 @@ export class ChannelsController {
     }
 
     @Get('workspace/:workspaceId')
-    findByWorkspace(@Param('workspaceId') workspaceId: string) {
-        return this.channelsService.findByWorkspace(workspaceId);
+    findByWorkspace(
+        @Param('workspaceId') workspaceId: string,
+        @CurrentUser('userId') userId: string,
+    ) {
+        return this.channelsService.findByWorkspace(workspaceId, userId);
     }
 
     @Get(':id')

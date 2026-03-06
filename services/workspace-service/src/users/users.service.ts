@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface SupabaseUserData {
@@ -12,8 +12,6 @@ export interface SupabaseUserData {
 
 @Injectable()
 export class UsersService {
-    private readonly logger = new Logger(UsersService.name);
-
     constructor(private readonly prisma: PrismaService) { }
 
     /**

@@ -10,12 +10,16 @@
   "scripts": {
     "install:all": "npm install && npm install --workspaces",
     "dev:workspace": "npm run start:dev --workspace=services/workspace-service",
+    "dev:meeting": "npm run start:dev --workspace=services/meeting-service",
     "dev:websocket": "npm run start:dev --workspace=services/websocket-hub",
-    "dev:all": "concurrently \"npm run dev:workspace\" \"npm run dev:websocket\"",
+    "dev:all": "concurrently \"npm run dev:workspace\" \"npm run dev:meeting\" \"npm run dev:websocket\"",
     "start:workspace": "cd services/workspace-service && node dist/main.js",
+    "start:meeting": "cd services/meeting-service && node dist/main.js",
     "start:websocket": "npm run start:prod --workspace=services/websocket-hub",
-    "build:workspace": "cd services/workspace-service && npx prisma generate && npx nest build",
-    "build:all": "npm run build:workspace",
+    "build:workspace": "cd services/workspace-service && npx prisma generate && npm run build",
+    "build:meeting": "cd services/meeting-service && npx prisma generate && npm run build",
+    "build:all": "npm run build:workspace && npm run build:meeting",
+    "render-build": "npm install && npm run build:workspace && npm run db:deploy",
     "db:migrate": "npm run prisma:migrate --workspace=services/workspace-service",
     "db:deploy": "cd services/workspace-service && npx prisma migrate deploy",
     "db:generate": "npm run prisma:generate --workspace=services/workspace-service",
@@ -25,8 +29,13 @@
     "check": "biome check --write .",
     "clean": "rm -rf node_modules services/*/node_modules services/*/dist shared/*/node_modules"
   },
+<<<<<<< HEAD
   "devDependencies": {
+=======
+  "dependencies": {
+>>>>>>> migration
     "@biomejs/biome": "^2.3.15",
+    "@supabase/supabase-js": "^2.98.0",
     "@types/node": "^20.11.5",
     "concurrently": "^8.2.2",
     "typescript": "^5.3.3"
@@ -34,8 +43,5 @@
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.98.0"
   }
 }

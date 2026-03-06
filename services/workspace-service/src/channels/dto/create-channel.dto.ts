@@ -9,7 +9,7 @@ export class CreateChannelDto {
     @IsNotEmpty()
     name: string;
 
-    @IsEnum(['PUBLIC', 'PRIVATE'])
+    @IsEnum(['PUBLIC', 'PRIVATE', 'DIRECT_MESSAGE'])
     @IsOptional()
     type?: string;
 

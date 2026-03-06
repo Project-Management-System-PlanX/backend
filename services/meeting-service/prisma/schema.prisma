@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model channel_members {
+  id        String   @id @default(uuid())
+  channelId String
+  userId    String
+  role      String   @default("MEMBER")
+  joinedAt  DateTime @default(now())
+  channels  channels @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+}
+
+model channels {
+  id              String            @id @default(uuid())
+  workspaceId     String
+  name            String
+  type            String            @default("PUBLIC")
+  description     String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  channel_members channel_members[]
+  workspaces      workspaces        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  groups          groups[]
+  messages        messages[]
+}
+
+model group_members {
+  id       String   @id @default(uuid())
+  groupId  String
+  userId   String
+  joinedAt DateTime @default(now())
+  groups   groups   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+}
+
+model groups {
+  id            String          @id @default(uuid())
+  channelId     String
+  name          String
+  description   String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  group_members group_members[]
+  channels      channels        @relation(fields: [channelId], references: [id], onDelete: Cascade)
+}
+
+model messages {
+  id         String   @id @default(uuid())
+  channel_id String
+  user_id    String
+  content    String
+  is_edited  Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  file_url   String?
+  file_name  String?
+  file_type  String?
+  file_size  Int?
+  channels   channels @relation(fields: [channel_id], references: [id], onDelete: Cascade)
+  users      users    @relation(fields: [user_id], references: [supabaseId], onDelete: Cascade)
+}
+
+model spaces {
+  id            String          @id @default(uuid())
+  workspaceId   String
+  name          String
+  description   String?
+  color         String          @default("#0B6E4F")
+  icon          String          @default("📋")
+  prefix        String
+  taskCounter   Int             @default(0)
+  createdBy     String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  workspaces    workspaces      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  task_statuses task_statuses[]
+  tasks         tasks[]
+
+  @@unique([workspaceId, prefix])
+}
+
+model task_comments {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tasks     tasks    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model task_labels {
+  id     String @id @default(uuid())
+  taskId String
+  name   String
+  color  String @default("#94A3B8")
+  tasks  tasks  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model task_statuses {
+  id       String  @id @default(uuid())
+  spaceId  String
+  name     String
+  color    String  @default("#94A3B8")
+  position Int     @default(0)
+  isDone   Boolean @default(false)
+  spaces   spaces  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  tasks    tasks[]
+
+  @@unique([spaceId, name])
+}
+
+model tasks {
+  id            String          @id @default(uuid())
+  spaceId       String
+  statusId      String
+  title         String
+  description   String?
+  taskNumber    Int
+  priority      String          @default("NONE")
+  assigneeId    String?
+  reporterId    String
+  dueDate       DateTime?
+  resolution    String          @default("UNRESOLVED")
+  position      Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  task_comments task_comments[]
+  task_labels   task_labels[]
+  spaces        spaces          @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  task_statuses task_statuses   @relation(fields: [statusId], references: [id])
+
+  @@unique([spaceId, taskNumber])
+}
+
+model users {
+  id                String              @id @default(uuid())
+  email             String              @unique
+  firstName         String?
+  lastName          String?
+  username          String?
+  imageUrl          String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  supabaseId        String              @unique
+  messages          messages[]
+  workspace_members workspace_members[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model workspace_invites {
+  id           String     @id @default(dbgenerated("(gen_random_uuid())::text"))
+  workspace_id String
+  token        String     @unique @default(dbgenerated("(gen_random_uuid())::text"))
+  created_by   String
+  expires_at   DateTime   @default(dbgenerated("(now() + '7 days'::interval)")) @db.Timestamp(6)
+  max_uses     Int        @default(0)
+  use_count    Int        @default(0)
+  created_at   DateTime   @default(now()) @db.Timestamp(6)
+  workspaces   workspaces @relation(fields: [workspace_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model workspace_members {
+  id          String     @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        String     @default("MEMBER")
+  joinedAt    DateTime   @default(now())
+  users       users      @relation(fields: [userId], references: [supabaseId])
+  workspaces  workspaces @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model workspaces {
+  id                String              @id @default(uuid())
+  name              String
+  slug              String              @unique
+  ownerId           String
+  avatar            String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  channels          channels[]
+  spaces            spaces[]
+  workspace_invites workspace_invites[]
+  workspace_members workspace_members[]
+  meetings          meetings[]
+}
+
+// ==================== MEETING SERVICE MODELS ====================
+
+enum MeetingType {
+  VIDEO
+  AUDIO
+}
+
+enum MeetingStatus {
+  ACTIVE
+  ENDED
+}
+
+model meetings {
+  id          String        @id @default(uuid())
+  roomId      String        @unique @map("room_id")
+  title       String
+  type        MeetingType   @default(VIDEO)
+  status      MeetingStatus @default(ACTIVE)
+  groupId     String?       @map("group_id")
+  channelId   String?       @map("channel_id")
+  workspaceId String?       @map("workspace_id")
+  createdById String        @map("created_by_id")
+  startedAt   DateTime      @default(now()) @map("started_at")
+  endedAt     DateTime?     @map("ended_at")
+  duration    Int?
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  workspace    workspaces?           @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  participants meeting_participants[]
+
+  @@index([status])
+  @@index([roomId])
+  @@index([groupId])
+}
+
+model meeting_participants {
+  id        String    @id @default(uuid())
+  meetingId String    @map("meeting_id")
+  userId    String    @map("user_id")
+  joinedAt  DateTime  @default(now()) @map("joined_at")
+  leftAt    DateTime? @map("left_at")
+  duration  Int?
+
+  meeting meetings @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, userId])
+  @@index([meetingId])
+  @@index([userId])
+}

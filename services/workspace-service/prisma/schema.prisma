@@ -3,65 +3,87 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// User profile — synced from Supabase on first login and kept up-to-date
 model User {
-  id        String   @id @default(uuid())
-  supabaseId String   @unique // Supabase user ID (auth.users.id)
-  email     String   @unique
-  firstName String?
-  lastName  String?
-  username  String?
-  imageUrl  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String            @id @default(uuid())
+  email            String            @unique
+  firstName        String?
+  lastName         String?
+  username         String?
+  imageUrl         String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  supabaseId       String            @unique
+  messages         Message[]
+  teamMembers      TeamMember[]
+  assignedTickets  Ticket[]          @relation("TicketAssignee")
+  createdTickets   Ticket[]          @relation("TicketCreator")
+  workspaceMembers WorkspaceMember[]
 
   @@map("users")
 }
 
 model Workspace {
-  id        String   @id @default(uuid())
+  id        String            @id @default(uuid())
   name      String
-  slug      String   @unique
+  slug      String            @unique
   ownerId   String
   avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  members  WorkspaceMember[]
-  channels Channel[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  channels  Channel[]
+  spaces    Space[]
+  teams     Team[]
+  tickets   Ticket[]
+  invites   WorkspaceInvite[]
+  members   WorkspaceMember[]
 
   @@map("workspaces")
 }
 
+model WorkspaceInvite {
+  id          String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  workspaceId String    @map("workspace_id")
+  token       String    @unique @default(dbgenerated("(gen_random_uuid())::text"))
+  createdBy   String    @map("created_by")
+  expiresAt   DateTime  @default(dbgenerated("(now() + '7 days'::interval)")) @map("expires_at") @db.Timestamp(6)
+  maxUses     Int       @default(0) @map("max_uses")
+  useCount    Int       @default(0) @map("use_count")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("workspace_invites")
+}
+
 model WorkspaceMember {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   workspaceId String
   userId      String
-  role        String   @default("MEMBER")
-  joinedAt    DateTime @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  role        String    @default("MEMBER")
+  joinedAt    DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [supabaseId])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
   @@map("workspace_members")
 }
 
 model Channel {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   workspaceId String
   name        String
-  type        String   @default("PUBLIC")
+  type        String          @default("PUBLIC")
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  members   ChannelMember[]
-  groups    Group[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  members     ChannelMember[]
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  groups      Group[]
+  messages    Message[]
 
   @@map("channels")
 }
@@ -72,23 +94,21 @@ model ChannelMember {
   userId    String
   role      String   @default("MEMBER")
   joinedAt  DateTime @default(now())
-
-  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   @@unique([channelId, userId])
   @@map("channel_members")
 }
 
 model Group {
-  id          String   @id @default(uuid())
+  id          String        @id @default(uuid())
   channelId   String
   name        String
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  channel Channel       @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  members GroupMember[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  members     GroupMember[]
+  channel     Channel       @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   @@map("groups")
 }
@@ -98,9 +118,150 @@ model GroupMember {
   groupId  String
   userId   String
   joinedAt DateTime @default(now())
-
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, userId])
   @@map("group_members")
+}
+
+model Message {
+  id        String   @id
+  channelId String   @map("channel_id")
+  userId    String   @map("user_id")
+  content   String
+  isEdited  Boolean  @default(false) @map("is_edited")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @map("updated_at")
+  fileUrl   String?  @map("file_url")
+  fileName  String?  @map("file_name")
+  fileType  String?  @map("file_type")
+  fileSize  Int?     @map("file_size")
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Space {
+  id          String       @id @default(uuid())
+  workspaceId String
+  name        String
+  description String?
+  color       String       @default("#0B6E4F")
+  icon        String       @default("📋")
+  prefix      String
+  taskCounter Int          @default(0)
+  createdBy   String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  statuses    TaskStatus[]
+  tasks       Task[]
+
+  @@unique([workspaceId, prefix])
+  @@map("spaces")
+}
+
+model TaskStatus {
+  id       String  @id @default(uuid())
+  spaceId  String
+  name     String
+  color    String  @default("#94A3B8")
+  position Int     @default(0)
+  isDone   Boolean @default(false)
+  space    Space   @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  tasks    Task[]
+
+  @@unique([spaceId, name])
+  @@map("task_statuses")
+}
+
+model Task {
+  id          String        @id @default(uuid())
+  spaceId     String
+  statusId    String
+  title       String
+  description String?
+  taskNumber  Int
+  priority    String        @default("NONE")
+  assigneeId  String?
+  reporterId  String
+  dueDate     DateTime?
+  resolution  String        @default("UNRESOLVED")
+  position    Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  comments    TaskComment[]
+  labels      TaskLabel[]
+  space       Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  status      TaskStatus    @relation(fields: [statusId], references: [id])
+
+  @@unique([spaceId, taskNumber])
+  @@map("tasks")
+}
+
+model TaskLabel {
+  id     String @id @default(uuid())
+  taskId String
+  name   String
+  color  String @default("#94A3B8")
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_labels")
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_comments")
+}
+
+model Team {
+  id          String       @id @default(uuid())
+  workspaceId String
+  name        String
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  members     TeamMember[]
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id       String   @id @default(uuid())
+  teamId   String
+  userId   String
+  role     String   @default("MEMBER")
+  joinedAt DateTime @default(now())
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+model Ticket {
+  id          String    @id @default(uuid())
+  workspaceId String
+  title       String
+  description String
+  status      String    @default("OPEN")
+  priority    String    @default("MEDIUM")
+  createdBy   String
+  assignedTo  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  assignee    User?     @relation("TicketAssignee", fields: [assignedTo], references: [supabaseId])
+  creator     User      @relation("TicketCreator", fields: [createdBy], references: [supabaseId])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("tickets")
 }
