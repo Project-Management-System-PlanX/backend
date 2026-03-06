@@ -52,8 +52,14 @@ export class WorkspacesService {
             include: {
                 workspace: {
                     include: {
-                        channels: true,
-                        members: true,
+                        _count: {
+                            select: {
+                                members: true,
+                                channels: {
+                                    where: { type: { not: 'DIRECT_MESSAGE' } }
+                                }
+                            }
+                        }
                     },
                 },
             },
@@ -62,8 +68,8 @@ export class WorkspacesService {
             const ws = m.workspace;
             return {
                 ...ws,
-                members: ws.members,
-                channels: null, // Avoid returning big blobs of data
+                members: new Array(ws._count.members).fill({}),
+                channels: new Array(ws._count.channels).fill({ type: 'PUBLIC' }),
             };
         });
     }
