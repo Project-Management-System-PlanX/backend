@@ -15,6 +15,7 @@ import { TeamsModule } from './teams/teams.module';
 import { TicketsService } from './tickets/tickets.service';
 import { TicketsController } from './tickets/tickets.controller';
 import { TicketsModule } from './tickets/tickets.module';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
     imports: [
@@ -33,6 +34,7 @@ import { TicketsModule } from './tickets/tickets.module';
         TasksModule,
         TeamsModule,
         TicketsModule,
+        MessagesModule,
     ],
     providers: [TeamsService, TicketsService],
     controllers: [TeamsController, TicketsController],
