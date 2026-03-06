@@ -1,4 +1,4 @@
-import { IsDateString, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateTaskDto {
     @IsString()
@@ -17,11 +17,19 @@ export class CreateTaskDto {
 
     @IsString()
     @IsOptional()
+    workType?: string; // TASK, STORY, BUG, EPIC, SUBTASK
+
+    @IsString()
+    @IsOptional()
     assigneeId?: string;
 
     @IsDateString()
     @IsOptional()
     dueDate?: string;
+
+    @IsDateString()
+    @IsOptional()
+    startDate?: string;
 
     @IsNumber()
     @IsOptional()
@@ -30,4 +38,25 @@ export class CreateTaskDto {
     @IsString()
     @IsOptional()
     statusId?: string;
+
+    @IsString()
+    @IsOptional()
+    parentId?: string;
+
+    @IsString()
+    @IsOptional()
+    teamId?: string;
+
+    @IsBoolean()
+    @IsOptional()
+    flagged?: boolean;
+
+    @IsString()
+    @IsOptional()
+    restrictTo?: string;
+
+    @IsArray()
+    @IsString({ each: true })
+    @IsOptional()
+    labels?: string[];
 }

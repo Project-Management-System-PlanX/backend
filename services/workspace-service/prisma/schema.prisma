@@ -148,7 +148,7 @@ model Space {
   name        String
   description String?
   color       String       @default("#0B6E4F")
-  icon        String       @default("📋")
+  icon        String       @default("P")
   prefix      String
   taskCounter Int          @default(0)
   createdBy   String
@@ -184,20 +184,57 @@ model Task {
   description String?
   taskNumber  Int
   priority    String        @default("NONE")
+  workType    String        @default("TASK")
   assigneeId  String?
   reporterId  String
   dueDate     DateTime?
+  startDate   DateTime?
   resolution  String        @default("UNRESOLVED")
   position    Int           @default(0)
+  parentId    String?
+  teamId      String?
+  flagged     Boolean       @default(false)
+  restrictTo  String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   comments    TaskComment[]
   labels      TaskLabel[]
+  attachments TaskAttachment[]
+  linkedFrom  TaskLink[]    @relation("linkedFrom")
+  linkedTo    TaskLink[]    @relation("linkedTo")
+  children    Task[]        @relation("TaskParent")
+  parent      Task?         @relation("TaskParent", fields: [parentId], references: [id])
   space       Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   status      TaskStatus    @relation(fields: [statusId], references: [id])
+  team        Team?         @relation(fields: [teamId], references: [id])
 
   @@unique([spaceId, taskNumber])
   @@map("tasks")
+}
+
+model TaskAttachment {
+  id        String   @id @default(uuid())
+  taskId    String
+  fileName  String
+  fileUrl   String
+  fileType  String?
+  fileSize  Int?
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_attachments")
+}
+
+model TaskLink {
+  id         String @id @default(uuid())
+  fromTaskId String
+  toTaskId   String
+  linkType   String @default("BLOCKS")
+  fromTask   Task   @relation("linkedFrom", fields: [fromTaskId], references: [id], onDelete: Cascade)
+  toTask     Task   @relation("linkedTo", fields: [toTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([fromTaskId, toTaskId])
+  @@map("task_links")
 }
 
 model TaskLabel {
@@ -230,6 +267,7 @@ model Team {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   members     TeamMember[]
+  tasks       Task[]
   workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@map("teams")

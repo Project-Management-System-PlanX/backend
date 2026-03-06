@@ -76,7 +76,7 @@ model spaces {
   name          String
   description   String?
   color         String          @default("#0B6E4F")
-  icon          String          @default("📋")
+  icon          String          @default("P")
   prefix        String
   taskCounter   Int             @default(0)
   createdBy     String

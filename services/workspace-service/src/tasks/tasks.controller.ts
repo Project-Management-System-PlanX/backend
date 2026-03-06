@@ -5,6 +5,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { MoveTaskDto } from './dto/move-task.dto';
 import { CreateTaskCommentDto } from './dto/create-task-comment.dto';
+import { CreateTaskAttachmentDto } from './dto/create-task-attachment.dto';
 
 @Controller('tasks')
 export class TasksController {
@@ -85,5 +86,33 @@ export class TasksController {
         @CurrentUser('userId') userId: string,
     ) {
         return this.tasksService.deleteComment(taskId, commentId, userId);
+    }
+
+    // Attachments
+
+    @Post(':taskId/attachments')
+    addAttachment(
+        @Param('taskId') taskId: string,
+        @Body() createAttachmentDto: CreateTaskAttachmentDto,
+        @CurrentUser('userId') userId: string,
+    ) {
+        return this.tasksService.createAttachment(taskId, createAttachmentDto, userId);
+    }
+
+    @Get(':taskId/attachments')
+    getAttachments(
+        @Param('taskId') taskId: string,
+        @CurrentUser('userId') userId: string,
+    ) {
+        return this.tasksService.getAttachments(taskId, userId);
+    }
+
+    @Delete(':taskId/attachments/:attachmentId')
+    removeAttachment(
+        @Param('taskId') taskId: string,
+        @Param('attachmentId') attachmentId: string,
+        @CurrentUser('userId') userId: string,
+    ) {
+        return this.tasksService.deleteAttachment(taskId, attachmentId, userId);
     }
 }

@@ -29,7 +29,7 @@ async function bootstrap() {
     const port = process.env.PORT || 3002;
     await app.listen(port);
 
-    console.log(`🚀 Workspace Service running on http://localhost:${port}`);
+    console.log(`Workspace Service running on http://localhost:${port}`);
 }
 
 bootstrap();
