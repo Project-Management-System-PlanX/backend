@@ -140,6 +140,30 @@ export class TasksService {
         });
     }
 
+    async findWorkedOn(userId: string) {
+        // Finds tasks the user created/reported, but which are not currently assigned to them
+        return this.prisma.task.findMany({
+            where: {
+                reporterId: userId,
+                assigneeId: { not: userId },
+                space: {
+                    workspace: {
+                        members: { some: { userId } }
+                    }
+                }
+            },
+            include: {
+                space: { select: { name: true, prefix: true, color: true, icon: true } },
+                status: true,
+                labels: true,
+                attachments: true,
+                team: { select: { id: true, name: true } },
+            },
+            orderBy: { updatedAt: 'desc' },
+            take: 100,
+        });
+    }
+
     async findOne(id: string, userId: string) {
         const task = await this.prisma.task.findUnique({
             where: { id },

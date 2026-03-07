@@ -32,6 +32,11 @@ export class TasksController {
         return this.tasksService.findAssignedToMe(userId);
     }
 
+    @Get('worked-on')
+    findWorkedOn(@CurrentUser('userId') userId: string) {
+        return this.tasksService.findWorkedOn(userId);
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string, @CurrentUser('userId') userId: string) {
         return this.tasksService.findOne(id, userId);
