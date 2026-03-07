@@ -146,6 +146,110 @@ export class WorkspacesService {
         };
     }
 
+    async getAnalytics(id: string, userId: string) {
+        // verify membership
+        const member = await this.prisma.workspaceMember.findUnique({
+            where: { workspaceId_userId: { workspaceId: id, userId } },
+        });
+        if (!member) throw new ForbiddenException('Not a member of this workspace');
+
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        // Parallel counts for dashboard stats
+        const [
+            teamMembers, 
+            activeTasks, 
+            completedTasks,
+            totalMessages, 
+            filesShared,
+            recentMessages,
+            activeChannels,
+            upcomingDeadlines,
+            recentActivity
+        ] = await Promise.all([
+            this.prisma.workspaceMember.count({ where: { workspaceId: id } }),
+            
+            // Tasks assigned to anyone in this workspace's spaces that are NOT done
+            this.prisma.task.count({
+                where: { space: { workspaceId: id }, status: { isDone: false } }
+            }),
+
+            // Tasks that ARE done
+            this.prisma.task.count({
+                where: { space: { workspaceId: id }, status: { isDone: true } }
+            }),
+
+            // Total messages in all channels of this workspace
+            this.prisma.message.count({
+                where: { channel: { workspaceId: id } }
+            }),
+
+            // Files shared (attachments on tasks)
+            this.prisma.taskAttachment.count({
+                where: { task: { space: { workspaceId: id } } }
+            }).catch(() => 0),
+
+            // Messages for weekly activity chart (last 7 days)
+            this.prisma.message.findMany({
+                where: { channel: { workspaceId: id }, createdAt: { gte: sevenDaysAgo } },
+                select: { createdAt: true }
+            }),
+
+            // Top active channels (exclude DMs)
+            this.prisma.channel.findMany({
+                where: { workspaceId: id, type: { not: 'DIRECT_MESSAGE' } },
+                include: { _count: { select: { messages: true } } },
+                orderBy: { messages: { _count: 'desc' } },
+                take: 5
+            }),
+
+            // Upcoming Deadlines (Next 5 incomplete tasks with due dates)
+            this.prisma.task.findMany({
+                where: { space: { workspaceId: id }, status: { isDone: false }, dueDate: { not: null } },
+                orderBy: { dueDate: 'asc' },
+                take: 5,
+                include: { space: true }
+            }),
+
+            // Recent Activity (Last 5 messages)
+            this.prisma.message.findMany({
+                where: { channel: { workspaceId: id } },
+                orderBy: { createdAt: 'desc' },
+                take: 5,
+                include: { user: true, channel: true }
+            })
+        ]);
+
+        // Process Weekly Activity into a day-by-day array
+        const weeklyActivityMap = new Map<string, number>();
+        // Initialize last 7 days to 0
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            weeklyActivityMap.set(d.toLocaleDateString(undefined, { weekday: 'short' }), 0);
+        }
+        for (const msg of recentMessages) {
+            const dayLabel = msg.createdAt.toLocaleDateString(undefined, { weekday: 'short' });
+            if (weeklyActivityMap.has(dayLabel)) {
+                weeklyActivityMap.set(dayLabel, weeklyActivityMap.get(dayLabel)! + 1);
+            }
+        }
+        const weeklyActivity = Array.from(weeklyActivityMap.entries()).map(([day, count]) => ({ day, count }));
+
+        return {
+            teamMembers,
+            activeTasks,
+            completedTasks,
+            totalMessages,
+            filesShared,
+            weeklyActivity,
+            activeChannels,
+            upcomingDeadlines,
+            recentActivity
+        };
+    }
+
     async update(id: string, updateWorkspaceDto: UpdateWorkspaceDto, userId: string) {
         const workspace = await this.prisma.workspace.findUnique({ where: { id } });
         if (!workspace) throw new NotFoundException('Workspace not found');

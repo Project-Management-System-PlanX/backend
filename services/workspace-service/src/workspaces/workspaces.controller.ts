@@ -46,6 +46,11 @@ export class WorkspacesController {
         return this.workspacesService.findOne(id);
     }
 
+    @Get(':id/analytics')
+    getAnalytics(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+        return this.workspacesService.getAnalytics(id, userId);
+    }
+
     @Patch(':id')
     update(
         @Param('id') id: string,
