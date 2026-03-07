@@ -12,7 +12,7 @@
     "dev:workspace": "npm run start:dev --workspace=services/workspace-service",
     "dev:meeting": "npm run start:dev --workspace=services/meeting-service",
     "dev:websocket": "npm run start:dev --workspace=services/websocket-hub",
-    "dev:all": "concurrently \"npm run dev:workspace\" \"npm run dev:meeting\" \"npm run dev:websocket\"",
+    "dev:all": "concurrently \"npm run dev:workspace\" \"npm run dev:meeting\"",
     "start:workspace": "cd services/workspace-service && node dist/main.js",
     "start:meeting": "cd services/meeting-service && node dist/main.js",
     "start:websocket": "npm run start:prod --workspace=services/websocket-hub",
