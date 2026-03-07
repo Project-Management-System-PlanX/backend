@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { SupabaseAuthModule } from './auth/supabase-auth.module';
 import { ChannelsModule } from './channels/channels.module';
+import { EmailModule } from './email/email.module';
 import { GroupsModule } from './groups/groups.module';
 import { MembersModule } from './members/members.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -24,6 +25,7 @@ import { MessagesModule } from './messages/messages.module';
             envFilePath: ['.env', '../../.env'],
         }),
         PrismaModule,
+        EmailModule,
         UsersModule,
         SupabaseAuthModule,
         WorkspacesModule,

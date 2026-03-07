@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/commo
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
+import { InviteByEmailDto } from './dto/invite-by-email.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { WorkspacesService } from './workspaces.service';
 
@@ -68,5 +69,14 @@ export class WorkspacesController {
     @Post(':id/invite')
     createInvite(@Param('id') id: string, @CurrentUser('userId') userId: string) {
         return this.workspacesService.createInvite(id, userId);
+    }
+
+    @Post(':id/invite-email')
+    inviteByEmail(
+        @Param('id') id: string,
+        @CurrentUser('userId') userId: string,
+        @Body() dto: InviteByEmailDto,
+    ) {
+        return this.workspacesService.inviteByEmail(id, userId, dto.emails, dto.channelIds);
     }
 }

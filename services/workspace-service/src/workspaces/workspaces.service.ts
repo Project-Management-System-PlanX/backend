@@ -2,15 +2,22 @@ import {
     ConflictException,
     ForbiddenException,
     Injectable,
+    Logger,
     NotFoundException,
 } from '@nestjs/common';
+import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 
 @Injectable()
 export class WorkspacesService {
-    constructor(private readonly prisma: PrismaService) { }
+    private readonly logger = new Logger(WorkspacesService.name);
+
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly emailService: EmailService,
+    ) { }
 
     async create(createWorkspaceDto: CreateWorkspaceDto, ownerId: string) {
         // Check if slug already exists
@@ -347,5 +354,87 @@ export class WorkspacesService {
         });
 
         return { workspace: invite.workspace, alreadyMember: false };
+    }
+
+    async inviteByEmail(
+        workspaceId: string,
+        userId: string,
+        emails: string[],
+        channelIds?: string[],
+    ) {
+        // Verify user is OWNER or ADMIN
+        const member = await this.prisma.workspaceMember.findUnique({
+            where: { workspaceId_userId: { workspaceId, userId } },
+            include: { user: true },
+        });
+        if (!member || !['OWNER', 'ADMIN'].includes(member.role)) {
+            throw new ForbiddenException('Only owners and admins can send invites');
+        }
+
+        // Get workspace name
+        const workspace = await this.prisma.workspace.findUnique({
+            where: { id: workspaceId },
+        });
+        if (!workspace) {
+            throw new NotFoundException('Workspace not found');
+        }
+
+        // If channelIds provided, verify they belong to this workspace
+        if (channelIds?.length) {
+            const channels = await this.prisma.channel.findMany({
+                where: { id: { in: channelIds }, workspaceId },
+                select: { id: true },
+            });
+            const validIds = new Set(channels.map((c) => c.id));
+            channelIds = channelIds.filter((id) => validIds.has(id));
+        }
+
+        // Create one invite token for this batch
+        const invite = await this.prisma.workspaceInvite.create({
+            data: {
+                workspaceId,
+                createdBy: userId,
+            },
+        });
+
+        const inviterName =
+            member.user?.firstName && member.user?.lastName
+                ? `${member.user.firstName} ${member.user.lastName}`
+                : member.user?.email || 'A teammate';
+
+        // Send emails in parallel
+        const results = await Promise.allSettled(
+            emails.map((email) =>
+                this.emailService.sendWorkspaceInvite({
+                    to: email,
+                    workspaceName: workspace.name,
+                    inviterName,
+                    inviteToken: invite.token,
+                }),
+            ),
+        );
+
+        const sent: string[] = [];
+        const failed: string[] = [];
+
+        results.forEach((result, i) => {
+            if (result.status === 'fulfilled' && result.value.success) {
+                sent.push(emails[i]);
+            } else {
+                failed.push(emails[i]);
+                const reason =
+                    result.status === 'rejected'
+                        ? result.reason
+                        : result.value.error;
+                this.logger.warn(`Failed to send invite to ${emails[i]}: ${reason}`);
+            }
+        });
+
+        return {
+            inviteToken: invite.token,
+            sent,
+            failed,
+            channelIds: channelIds || [],
+        };
     }
 }
