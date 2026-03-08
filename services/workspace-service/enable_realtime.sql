@@ -6,5 +6,6 @@ begin;
   create publication supabase_realtime;
 commit;
 
--- add table to publication
+-- add tables to publication
 alter publication supabase_realtime add table messages;
+alter publication supabase_realtime add table email_invitations;

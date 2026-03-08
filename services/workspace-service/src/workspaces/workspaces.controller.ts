@@ -71,6 +71,11 @@ export class WorkspacesController {
         return this.workspacesService.createInvite(id, userId);
     }
 
+    @Get(':id/invitations')
+    getInvitations(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+        return this.workspacesService.getInvitations(id, userId);
+    }
+
     @Post(':id/invite-email')
     inviteByEmail(
         @Param('id') id: string,

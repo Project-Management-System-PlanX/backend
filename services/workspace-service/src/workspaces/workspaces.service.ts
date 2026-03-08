@@ -353,6 +353,22 @@ export class WorkspacesService {
             data: { useCount: { increment: 1 } },
         });
 
+        // Mark any matching email invitations as ACCEPTED
+        const user = await this.prisma.user.findUnique({ where: { supabaseId: userId } });
+        if (user?.email) {
+            await this.prisma.emailInvitation.updateMany({
+                where: {
+                    workspaceId: invite.workspaceId,
+                    email: user.email.toLowerCase(),
+                    status: 'PENDING',
+                },
+                data: {
+                    status: 'ACCEPTED',
+                    acceptedAt: new Date(),
+                },
+            });
+        }
+
         return { workspace: invite.workspace, alreadyMember: false };
     }
 
@@ -402,9 +418,22 @@ export class WorkspacesService {
                 ? `${member.user.firstName} ${member.user.lastName}`
                 : member.user?.email || 'A teammate';
 
+        // Create EmailInvitation tracking records FIRST (so DB issues surface before sending)
+        const normalizedEmails = emails.map((e) => e.toLowerCase());
+        await this.prisma.emailInvitation.createMany({
+            data: normalizedEmails.map((email) => ({
+                workspaceId,
+                email,
+                invitedBy: userId,
+                inviteToken: invite.token,
+                status: 'PENDING',
+                channelIds: channelIds || [],
+            })),
+        });
+
         // Send emails in parallel
         const results = await Promise.allSettled(
-            emails.map((email) =>
+            normalizedEmails.map((email) =>
                 this.emailService.sendWorkspaceInvite({
                     to: email,
                     workspaceName: workspace.name,
@@ -419,16 +448,27 @@ export class WorkspacesService {
 
         results.forEach((result, i) => {
             if (result.status === 'fulfilled' && result.value.success) {
-                sent.push(emails[i]);
+                sent.push(normalizedEmails[i]);
             } else {
-                failed.push(emails[i]);
+                failed.push(normalizedEmails[i]);
                 const reason =
                     result.status === 'rejected'
                         ? result.reason
                         : result.value.error;
-                this.logger.warn(`Failed to send invite to ${emails[i]}: ${reason}`);
+                this.logger.warn(`Failed to send invite to ${normalizedEmails[i]}: ${reason}`);
             }
         });
+
+        // Mark failed sends so tracking stays accurate
+        if (failed.length > 0) {
+            await this.prisma.emailInvitation.updateMany({
+                where: {
+                    inviteToken: invite.token,
+                    email: { in: failed },
+                },
+                data: { status: 'FAILED' },
+            });
+        }
 
         return {
             inviteToken: invite.token,
@@ -436,5 +476,36 @@ export class WorkspacesService {
             failed,
             channelIds: channelIds || [],
         };
+    }
+
+    async getInvitations(workspaceId: string, userId: string) {
+        // Verify membership
+        const member = await this.prisma.workspaceMember.findUnique({
+            where: { workspaceId_userId: { workspaceId, userId } },
+        });
+        if (!member) {
+            throw new ForbiddenException('Not a member of this workspace');
+        }
+
+        // Get user email for received invitations
+        const user = await this.prisma.user.findUnique({ where: { supabaseId: userId } });
+
+        // Invitations SENT by this user
+        const sent = await this.prisma.emailInvitation.findMany({
+            where: { workspaceId, invitedBy: userId },
+            orderBy: { sentAt: 'desc' },
+            include: { workspace: { select: { name: true, slug: true } } },
+        });
+
+        // Invitations RECEIVED by this user's email
+        const received = user?.email
+            ? await this.prisma.emailInvitation.findMany({
+                where: { email: user.email.toLowerCase(), workspaceId },
+                orderBy: { sentAt: 'desc' },
+                include: { workspace: { select: { name: true, slug: true } } },
+            })
+            : [];
+
+        return { sent, received };
     }
 }
