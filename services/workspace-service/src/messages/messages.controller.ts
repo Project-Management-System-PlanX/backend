@@ -16,6 +16,7 @@ export class MessagesController {
             fileName?: string;
             fileType?: string;
             fileSize?: number;
+            duration?: number;
         },
     ) {
         const fileDetails = body.fileUrl
@@ -24,6 +25,7 @@ export class MessagesController {
                   fileName: body.fileName || '',
                   fileType: body.fileType || '',
                   fileSize: body.fileSize || 0,
+                  duration: body.duration,
               }
             : undefined;
 

@@ -154,6 +154,7 @@ model Message {
   fileName  String?  @map("file_name")
   fileType  String?  @map("file_type")
   fileSize  Int?     @map("file_size")
+  duration  Int?     @map("duration")
   channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
 

@@ -14,6 +14,7 @@ export class MessagesService {
             fileName: string;
             fileType: string;
             fileSize: number;
+            duration?: number;
         },
     ) {
         // Verify the channel exists
@@ -40,6 +41,7 @@ export class MessagesService {
                           fileName: fileDetails.fileName,
                           fileType: fileDetails.fileType,
                           fileSize: fileDetails.fileSize,
+                          duration: fileDetails.duration || null,
                       }
                     : {}),
             },
@@ -87,6 +89,7 @@ export class MessagesService {
                 fileName: null,
                 fileType: null,
                 fileSize: null,
+                duration: null,
             },
         });
     }
