@@ -117,6 +117,74 @@ export class TasksService {
         }
     }
 
+    async bulkCreate(tasks: CreateTaskDto[], userId: string) {
+        this.logger.log(`Bulk creating ${tasks.length} tasks for userId=${userId}`);
+        if (!tasks.length) return [];
+
+        const spaceId = tasks[0].spaceId;
+
+        // 1. Verify access once
+        const space = await this.prisma.space.findUnique({
+            where: { id: spaceId },
+            include: {
+                workspace: { include: { members: { where: { userId } } } },
+                statuses: { orderBy: { position: 'asc' } },
+            },
+        });
+
+        if (!space || space.workspace.members.length === 0) {
+            throw new ForbiddenException('You do not have access to this space');
+        }
+        if (space.statuses.length === 0) {
+            throw new BadRequestException('Space has no statuses configured');
+        }
+
+        const defaultStatusId = space.statuses[0].id;
+
+        // 2. Increment counter by total count in one query
+        const updatedSpace = await this.prisma.space.update({
+            where: { id: spaceId },
+            data: { taskCounter: { increment: tasks.length } },
+        });
+
+        const startNumber = updatedSpace.taskCounter - tasks.length + 1;
+
+        // 3. Create all tasks in a single transaction
+        const created = await this.prisma.$transaction(
+            tasks.map((dto, i) =>
+                this.prisma.task.create({
+                    data: {
+                        spaceId: dto.spaceId,
+                        title: dto.title,
+                        description: dto.description,
+                        priority: dto.priority || 'NONE',
+                        workType: dto.workType || 'TASK',
+                        assigneeId: dto.assigneeId,
+                        reporterId: userId,
+                        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+                        startDate: dto.startDate ? new Date(dto.startDate) : null,
+                        statusId: dto.statusId || defaultStatusId,
+                        taskNumber: startNumber + i,
+                        position: dto.position || i,
+                        parentId: dto.parentId || null,
+                        teamId: dto.teamId || null,
+                        flagged: dto.flagged || false,
+                        restrictTo: dto.restrictTo || null,
+                    },
+                    include: {
+                        status: true,
+                        labels: true,
+                        attachments: true,
+                        parent: { select: { id: true, title: true, taskNumber: true } },
+                        team: { select: { id: true, name: true } },
+                    },
+                }),
+            ),
+        );
+
+        return created;
+    }
+
     async findBySpace(
         spaceId: string,
         userId: string,

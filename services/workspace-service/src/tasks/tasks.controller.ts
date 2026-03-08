@@ -16,6 +16,11 @@ export class TasksController {
         return this.tasksService.create(createTaskDto, userId);
     }
 
+    @Post('bulk')
+    bulkCreate(@CurrentUser('userId') userId: string, @Body() body: { tasks: CreateTaskDto[] }) {
+        return this.tasksService.bulkCreate(body.tasks, userId);
+    }
+
     @Get('space/:spaceId')
     findBySpace(
         @Param('spaceId') spaceId: string,
