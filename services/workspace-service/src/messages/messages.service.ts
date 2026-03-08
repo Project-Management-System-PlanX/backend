@@ -67,6 +67,38 @@ export class MessagesService {
         });
     }
 
+    async findFilesByWorkspace(workspaceId: string) {
+        return this.prisma.message.findMany({
+            where: {
+                fileUrl: { not: null },
+                deletedAt: null,
+                channel: {
+                    workspaceId,
+                },
+            },
+            include: {
+                user: {
+                    select: {
+                        supabaseId: true,
+                        firstName: true,
+                        lastName: true,
+                        username: true,
+                        imageUrl: true,
+                        email: true,
+                    },
+                },
+                channel: {
+                    select: {
+                        id: true,
+                        name: true,
+                        type: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
     async softDelete(messageId: string, userId: string) {
         const message = await this.prisma.message.findUnique({
             where: { id: messageId },

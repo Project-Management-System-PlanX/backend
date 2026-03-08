@@ -37,6 +37,11 @@ export class MessagesController {
         return this.messagesService.findByChannel(channelId, limit ? parseInt(limit, 10) : 50);
     }
 
+    @Get('workspace/:workspaceId/files')
+    findFilesByWorkspace(@Param('workspaceId') workspaceId: string) {
+        return this.messagesService.findFilesByWorkspace(workspaceId);
+    }
+
     @Delete(':id')
     delete(@Param('id') id: string, @CurrentUser('userId') userId: string) {
         return this.messagesService.softDelete(id, userId);
