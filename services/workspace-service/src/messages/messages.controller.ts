@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { MessagesService } from './messages.service';
 
@@ -36,5 +36,13 @@ export class MessagesController {
         @Query('limit') limit?: string,
     ) {
         return this.messagesService.findByChannel(channelId, limit ? parseInt(limit, 10) : 50);
+    }
+
+    @Delete(':id')
+    delete(
+        @Param('id') id: string,
+        @CurrentUser('userId') userId: string,
+    ) {
+        return this.messagesService.softDelete(id, userId);
     }
 }

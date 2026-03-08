@@ -57,4 +57,30 @@ export class MessagesService {
             take: limit,
         });
     }
+
+    async softDelete(messageId: string, userId: string) {
+        const message = await this.prisma.message.findUnique({
+            where: { id: messageId },
+        });
+
+        if (!message) {
+            throw new NotFoundException('Message not found');
+        }
+
+        if (message.userId !== userId) {
+            throw new ForbiddenException('You can only delete your own messages');
+        }
+
+        return this.prisma.message.update({
+            where: { id: messageId },
+            data: {
+                deletedAt: new Date(),
+                content: '',
+                fileUrl: null,
+                fileName: null,
+                fileType: null,
+                fileSize: null,
+            },
+        });
+    }
 }
