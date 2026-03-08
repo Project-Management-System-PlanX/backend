@@ -17,7 +17,7 @@ export class WorkspacesService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly emailService: EmailService,
-    ) { }
+    ) {}
 
     async create(createWorkspaceDto: CreateWorkspaceDto, ownerId: string) {
         // Check if slug already exists
@@ -63,10 +63,10 @@ export class WorkspacesService {
                             select: {
                                 members: true,
                                 channels: {
-                                    where: { type: { not: 'DIRECT_MESSAGE' } }
-                                }
-                            }
-                        }
+                                    where: { type: { not: 'DIRECT_MESSAGE' } },
+                                },
+                            },
+                        },
                     },
                 },
             },
@@ -86,10 +86,10 @@ export class WorkspacesService {
         return this.prisma.workspace.findMany({
             include: {
                 members: {
-                    include: { user: true }
+                    include: { user: true },
                 },
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
         });
     }
 
@@ -99,38 +99,38 @@ export class WorkspacesService {
 
         // Demote the old owner to ADMIN
         const oldOwnerMember = await this.prisma.workspaceMember.findUnique({
-            where: { workspaceId_userId: { workspaceId, userId: workspace.ownerId } }
+            where: { workspaceId_userId: { workspaceId, userId: workspace.ownerId } },
         });
         if (oldOwnerMember) {
             await this.prisma.workspaceMember.update({
                 where: { workspaceId_userId: { workspaceId, userId: workspace.ownerId } },
-                data: { role: 'ADMIN' }
+                data: { role: 'ADMIN' },
             });
         }
 
         // Add or promote new owner
         const existingMember = await this.prisma.workspaceMember.findUnique({
-            where: { workspaceId_userId: { workspaceId, userId: newOwnerId } }
+            where: { workspaceId_userId: { workspaceId, userId: newOwnerId } },
         });
         if (existingMember) {
             await this.prisma.workspaceMember.update({
                 where: { workspaceId_userId: { workspaceId, userId: newOwnerId } },
-                data: { role: 'OWNER' }
+                data: { role: 'OWNER' },
             });
         } else {
             await this.prisma.workspaceMember.create({
                 data: {
                     workspaceId,
                     userId: newOwnerId,
-                    role: 'OWNER'
-                }
+                    role: 'OWNER',
+                },
             });
         }
 
         // Update the workspace's primary ownerId link
         return this.prisma.workspace.update({
             where: { id: workspaceId },
-            data: { ownerId: newOwnerId }
+            data: { ownerId: newOwnerId },
         });
     }
 
@@ -165,42 +165,44 @@ export class WorkspacesService {
 
         // Parallel counts for dashboard stats
         const [
-            teamMembers, 
-            activeTasks, 
+            teamMembers,
+            activeTasks,
             completedTasks,
-            totalMessages, 
+            totalMessages,
             filesShared,
             recentMessages,
             activeChannels,
             upcomingDeadlines,
-            recentActivity
+            recentActivity,
         ] = await Promise.all([
             this.prisma.workspaceMember.count({ where: { workspaceId: id } }),
-            
+
             // Tasks assigned to anyone in this workspace's spaces that are NOT done
             this.prisma.task.count({
-                where: { space: { workspaceId: id }, status: { isDone: false } }
+                where: { space: { workspaceId: id }, status: { isDone: false } },
             }),
 
             // Tasks that ARE done
             this.prisma.task.count({
-                where: { space: { workspaceId: id }, status: { isDone: true } }
+                where: { space: { workspaceId: id }, status: { isDone: true } },
             }),
 
             // Total messages in all channels of this workspace
             this.prisma.message.count({
-                where: { channel: { workspaceId: id } }
+                where: { channel: { workspaceId: id } },
             }),
 
             // Files shared (attachments on tasks)
-            this.prisma.taskAttachment.count({
-                where: { task: { space: { workspaceId: id } } }
-            }).catch(() => 0),
+            this.prisma.taskAttachment
+                .count({
+                    where: { task: { space: { workspaceId: id } } },
+                })
+                .catch(() => 0),
 
             // Messages for weekly activity chart (last 7 days)
             this.prisma.message.findMany({
                 where: { channel: { workspaceId: id }, createdAt: { gte: sevenDaysAgo } },
-                select: { createdAt: true }
+                select: { createdAt: true },
             }),
 
             // Top active channels (exclude DMs)
@@ -208,15 +210,19 @@ export class WorkspacesService {
                 where: { workspaceId: id, type: { not: 'DIRECT_MESSAGE' } },
                 include: { _count: { select: { messages: true } } },
                 orderBy: { messages: { _count: 'desc' } },
-                take: 5
+                take: 5,
             }),
 
             // Upcoming Deadlines (Next 5 incomplete tasks with due dates)
             this.prisma.task.findMany({
-                where: { space: { workspaceId: id }, status: { isDone: false }, dueDate: { not: null } },
+                where: {
+                    space: { workspaceId: id },
+                    status: { isDone: false },
+                    dueDate: { not: null },
+                },
                 orderBy: { dueDate: 'asc' },
                 take: 5,
-                include: { space: true }
+                include: { space: true },
             }),
 
             // Recent Activity (Last 5 messages)
@@ -224,8 +230,8 @@ export class WorkspacesService {
                 where: { channel: { workspaceId: id } },
                 orderBy: { createdAt: 'desc' },
                 take: 5,
-                include: { user: true, channel: true }
-            })
+                include: { user: true, channel: true },
+            }),
         ]);
 
         // Process Weekly Activity into a day-by-day array
@@ -242,7 +248,10 @@ export class WorkspacesService {
                 weeklyActivityMap.set(dayLabel, weeklyActivityMap.get(dayLabel)! + 1);
             }
         }
-        const weeklyActivity = Array.from(weeklyActivityMap.entries()).map(([day, count]) => ({ day, count }));
+        const weeklyActivity = Array.from(weeklyActivityMap.entries()).map(([day, count]) => ({
+            day,
+            count,
+        }));
 
         return {
             teamMembers,
@@ -253,7 +262,7 @@ export class WorkspacesService {
             weeklyActivity,
             activeChannels,
             upcomingDeadlines,
-            recentActivity
+            recentActivity,
         };
     }
 
@@ -396,13 +405,14 @@ export class WorkspacesService {
         }
 
         // If channelIds provided, verify they belong to this workspace
-        if (channelIds?.length) {
+        let validChannelIds = channelIds;
+        if (validChannelIds?.length) {
             const channels = await this.prisma.channel.findMany({
-                where: { id: { in: channelIds }, workspaceId },
+                where: { id: { in: validChannelIds }, workspaceId },
                 select: { id: true },
             });
             const validIds = new Set(channels.map((c) => c.id));
-            channelIds = channelIds.filter((id) => validIds.has(id));
+            validChannelIds = validChannelIds.filter((id) => validIds.has(id));
         }
 
         // Create one invite token for this batch
@@ -427,7 +437,7 @@ export class WorkspacesService {
                 invitedBy: userId,
                 inviteToken: invite.token,
                 status: 'PENDING',
-                channelIds: channelIds || [],
+                channelIds: validChannelIds || [],
             })),
         });
 
@@ -451,10 +461,7 @@ export class WorkspacesService {
                 sent.push(normalizedEmails[i]);
             } else {
                 failed.push(normalizedEmails[i]);
-                const reason =
-                    result.status === 'rejected'
-                        ? result.reason
-                        : result.value.error;
+                const reason = result.status === 'rejected' ? result.reason : result.value.error;
                 this.logger.warn(`Failed to send invite to ${normalizedEmails[i]}: ${reason}`);
             }
         });
@@ -474,7 +481,7 @@ export class WorkspacesService {
             inviteToken: invite.token,
             sent,
             failed,
-            channelIds: channelIds || [],
+            channelIds: validChannelIds || [],
         };
     }
 
@@ -500,10 +507,10 @@ export class WorkspacesService {
         // Invitations RECEIVED by this user's email
         const received = user?.email
             ? await this.prisma.emailInvitation.findMany({
-                where: { email: user.email.toLowerCase(), workspaceId },
-                orderBy: { sentAt: 'desc' },
-                include: { workspace: { select: { name: true, slug: true } } },
-            })
+                  where: { email: user.email.toLowerCase(), workspaceId },
+                  orderBy: { sentAt: 'desc' },
+                  include: { workspace: { select: { name: true, slug: true } } },
+              })
             : [];
 
         return { sent, received };

@@ -1,16 +1,21 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class MessagesService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
-    async create(channelId: string, userId: string, content: string | null, fileDetails?: {
-        fileUrl: string;
-        fileName: string;
-        fileType: string;
-        fileSize: number;
-    }) {
+    async create(
+        channelId: string,
+        userId: string,
+        content: string | null,
+        fileDetails?: {
+            fileUrl: string;
+            fileName: string;
+            fileType: string;
+            fileSize: number;
+        },
+    ) {
         // Verify the channel exists
         const channel = await this.prisma.channel.findUnique({
             where: { id: channelId },
@@ -29,12 +34,14 @@ export class MessagesService {
                 userId,
                 content: content || '',
                 updatedAt: now,
-                ...(fileDetails ? {
-                    fileUrl: fileDetails.fileUrl,
-                    fileName: fileDetails.fileName,
-                    fileType: fileDetails.fileType,
-                    fileSize: fileDetails.fileSize,
-                } : {}),
+                ...(fileDetails
+                    ? {
+                          fileUrl: fileDetails.fileUrl,
+                          fileName: fileDetails.fileName,
+                          fileType: fileDetails.fileType,
+                          fileSize: fileDetails.fileSize,
+                      }
+                    : {}),
             },
         });
     }

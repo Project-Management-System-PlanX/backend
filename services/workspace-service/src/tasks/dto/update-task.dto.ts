@@ -1,11 +1,8 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { OmitType, PartialType } from '@nestjs/mapped-types';
+import { IsArray, IsOptional, IsString } from 'class-validator';
 import { CreateTaskDto } from './create-task.dto';
-import { OmitType } from '@nestjs/mapped-types';
-import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
-export class UpdateTaskDto extends PartialType(
-    OmitType(CreateTaskDto, ['spaceId'] as const)
-) {
+export class UpdateTaskDto extends PartialType(OmitType(CreateTaskDto, ['spaceId'] as const)) {
     title?: string;
     description?: string;
     priority?: string;

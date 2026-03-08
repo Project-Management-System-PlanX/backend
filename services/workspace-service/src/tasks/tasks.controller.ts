@@ -1,15 +1,15 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
-import { UpdateTaskDto } from './dto/update-task.dto';
-import { MoveTaskDto } from './dto/move-task.dto';
-import { CreateTaskCommentDto } from './dto/create-task-comment.dto';
 import { CreateTaskAttachmentDto } from './dto/create-task-attachment.dto';
+import { CreateTaskCommentDto } from './dto/create-task-comment.dto';
+import { MoveTaskDto } from './dto/move-task.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
+import { TasksService } from './tasks.service';
 
 @Controller('tasks')
 export class TasksController {
-    constructor(private readonly tasksService: TasksService) { }
+    constructor(private readonly tasksService: TasksService) {}
 
     @Post()
     create(@CurrentUser('userId') userId: string, @Body() createTaskDto: CreateTaskDto) {
@@ -77,10 +77,7 @@ export class TasksController {
     }
 
     @Get(':taskId/comments')
-    getComments(
-        @Param('taskId') taskId: string,
-        @CurrentUser('userId') userId: string,
-    ) {
+    getComments(@Param('taskId') taskId: string, @CurrentUser('userId') userId: string) {
         return this.tasksService.getComments(taskId, userId);
     }
 
@@ -105,10 +102,7 @@ export class TasksController {
     }
 
     @Get(':taskId/attachments')
-    getAttachments(
-        @Param('taskId') taskId: string,
-        @CurrentUser('userId') userId: string,
-    ) {
+    getAttachments(@Param('taskId') taskId: string, @CurrentUser('userId') userId: string) {
         return this.tasksService.getAttachments(taskId, userId);
     }
 

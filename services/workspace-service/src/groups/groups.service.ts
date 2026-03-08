@@ -4,7 +4,7 @@ import { CreateGroupDto } from './dto/create-group.dto';
 
 @Injectable()
 export class GroupsService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async create(createGroupDto: CreateGroupDto, createdByUserId: string) {
         // Verify channel exists and user is a channel member

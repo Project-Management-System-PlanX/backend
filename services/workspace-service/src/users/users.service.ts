@@ -12,7 +12,7 @@ export interface SupabaseUserData {
 
 @Injectable()
 export class UsersService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     /**
      * Upsert a user from Supabase JWT claims.

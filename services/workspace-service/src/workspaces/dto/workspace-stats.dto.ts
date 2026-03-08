@@ -1,6 +1,6 @@
 export class WorkspaceStatsDto {
-  totalMessages: number;
-  activeTasks: number;
-  teamMembers: number;
-  filesShared: number;
+    totalMessages: number;
+    activeTasks: number;
+    teamMembers: number;
+    filesShared: number;
 }

@@ -9,4 +9,4 @@ import { TicketsService } from './tickets.service';
     controllers: [TicketsController],
     providers: [TicketsService],
 })
-export class TicketsModule { }
+export class TicketsModule {}

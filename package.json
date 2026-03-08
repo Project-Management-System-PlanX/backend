@@ -39,5 +39,9 @@
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "@swc/cli": "^0.5.2",
+    "@swc/core": "^1.15.18"
   }
 }

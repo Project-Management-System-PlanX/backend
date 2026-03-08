@@ -1,13 +1,16 @@
-import { Controller, Get, Post, Body, Param, Patch } from '@nestjs/common';
-import { TicketsService } from './tickets.service';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { TicketsService } from './tickets.service';
 
 @Controller('tickets')
 export class TicketsController {
-    constructor(private readonly ticketsService: TicketsService) { }
+    constructor(private readonly ticketsService: TicketsService) {}
 
     @Post()
-    create(@CurrentUser('userId') userId: string, @Body() body: { workspaceId: string, title: string, description: string }) {
+    create(
+        @CurrentUser('userId') userId: string,
+        @Body() body: { workspaceId: string; title: string; description: string },
+    ) {
         return this.ticketsService.create(body.workspaceId, userId, body.title, body.description);
     }
 
@@ -17,7 +20,7 @@ export class TicketsController {
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() body: { status?: string, assignedTo?: string }) {
+    update(@Param('id') id: string, @Body() body: { status?: string; assignedTo?: string }) {
         return this.ticketsService.update(id, body);
     }
 }

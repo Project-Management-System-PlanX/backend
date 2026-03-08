@@ -7,4 +7,4 @@ import { SpacesService } from './spaces.service';
     providers: [SpacesService],
     exports: [SpacesService],
 })
-export class SpacesModule { }
+export class SpacesModule {}

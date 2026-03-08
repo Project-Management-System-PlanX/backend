@@ -72,8 +72,11 @@ export class SupabaseAuthGuard implements CanActivate {
             const authUser: AuthUser = {
                 userId: user.id,
                 email: user.email || '',
-                firstName: user.user_metadata?.first_name || user.user_metadata?.full_name?.split(' ')[0],
-                lastName: user.user_metadata?.last_name || user.user_metadata?.full_name?.split(' ').slice(1).join(' '),
+                firstName:
+                    user.user_metadata?.first_name || user.user_metadata?.full_name?.split(' ')[0],
+                lastName:
+                    user.user_metadata?.last_name ||
+                    user.user_metadata?.full_name?.split(' ').slice(1).join(' '),
                 username: user.user_metadata?.username,
                 imageUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
             };

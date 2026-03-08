@@ -12,8 +12,10 @@ export class EmailService {
     constructor(private readonly configService: ConfigService) {
         const apiKey = this.configService.get<string>('RESEND_API_KEY');
         this.resend = new Resend(apiKey || '');
-        this.fromEmail = this.configService.get<string>('RESEND_FROM_EMAIL') || 'TeamUP <onboarding@resend.dev>';
-        this.frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+        this.fromEmail =
+            this.configService.get<string>('RESEND_FROM_EMAIL') || 'TeamUP <onboarding@resend.dev>';
+        this.frontendUrl =
+            this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
     }
 
     async sendWorkspaceInvite(params: {
@@ -41,7 +43,9 @@ export class EmailService {
                 return { success: false, error: error.message };
             }
 
-            this.logger.log(`Invite email sent to ${params.to} for workspace "${params.workspaceName}"`);
+            this.logger.log(
+                `Invite email sent to ${params.to} for workspace "${params.workspaceName}"`,
+            );
             return { success: true };
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error';

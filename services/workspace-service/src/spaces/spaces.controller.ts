@@ -1,14 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { SpacesService } from './spaces.service';
 import { CreateSpaceDto } from './dto/create-space.dto';
-import { UpdateSpaceDto } from './dto/update-space.dto';
 import { CreateStatusDto } from './dto/create-status.dto';
+import { UpdateSpaceDto } from './dto/update-space.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
+import { SpacesService } from './spaces.service';
 
 @Controller('spaces')
 export class SpacesController {
-    constructor(private readonly spacesService: SpacesService) { }
+    constructor(private readonly spacesService: SpacesService) {}
 
     @Post()
     create(@CurrentUser('userId') userId: string, @Body() createSpaceDto: CreateSpaceDto) {
