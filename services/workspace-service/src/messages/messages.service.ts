@@ -16,6 +16,7 @@ export class MessagesService {
             fileSize: number;
             duration?: number;
         },
+        parentId?: string,
     ) {
         // Verify the channel exists
         const channel = await this.prisma.channel.findUnique({
@@ -35,6 +36,7 @@ export class MessagesService {
                 userId,
                 content: content || '',
                 updatedAt: now,
+                ...(parentId ? { parentId } : {}),
                 ...(fileDetails
                     ? {
                           fileUrl: fileDetails.fileUrl,
@@ -44,6 +46,26 @@ export class MessagesService {
                           duration: fileDetails.duration || null,
                       }
                     : {}),
+            },
+            include: {
+                parent: {
+                    select: {
+                        id: true,
+                        content: true,
+                        userId: true,
+                        fileUrl: true,
+                        fileName: true,
+                        fileType: true,
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                username: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
             },
         });
     }
@@ -59,6 +81,24 @@ export class MessagesService {
                         username: true,
                         imageUrl: true,
                         email: true,
+                    },
+                },
+                parent: {
+                    select: {
+                        id: true,
+                        content: true,
+                        userId: true,
+                        fileUrl: true,
+                        fileName: true,
+                        fileType: true,
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                username: true,
+                                email: true,
+                            },
+                        },
                     },
                 },
             },

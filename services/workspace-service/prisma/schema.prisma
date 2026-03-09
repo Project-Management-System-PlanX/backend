@@ -155,6 +155,9 @@ model Message {
   fileType  String?  @map("file_type")
   fileSize  Int?     @map("file_size")
   duration  Int?     @map("duration")
+  parentId  String?  @map("parent_id")
+  parent    Message? @relation("MessageReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies   Message[] @relation("MessageReplies")
   channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
 

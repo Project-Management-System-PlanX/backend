@@ -17,6 +17,7 @@ export class MessagesController {
             fileType?: string;
             fileSize?: number;
             duration?: number;
+            parentId?: string;
         },
     ) {
         const fileDetails = body.fileUrl
@@ -29,7 +30,13 @@ export class MessagesController {
               }
             : undefined;
 
-        return this.messagesService.create(body.channelId, userId, body.content, fileDetails);
+        return this.messagesService.create(
+            body.channelId,
+            userId,
+            body.content,
+            fileDetails,
+            body.parentId,
+        );
     }
 
     @Get('channel/:channelId')
