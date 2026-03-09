@@ -1,6 +1,11 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import type { Request } from 'express';
 import type { AuthUser } from './supabase-auth.guard';
+
+/** Platform-agnostic request shape (works with Express and Fastify) */
+interface HttpRequest {
+    auth?: AuthUser;
+    [key: string]: unknown;
+}
 
 /**
  * Parameter decorator to extract the authenticated Supabase user from the request.
@@ -11,7 +16,7 @@ import type { AuthUser } from './supabase-auth.guard';
  */
 export const CurrentUser = createParamDecorator(
     (field: keyof AuthUser | undefined, ctx: ExecutionContext) => {
-        const request = ctx.switchToHttp().getRequest<Request & { auth: AuthUser }>();
+        const request = ctx.switchToHttp().getRequest<HttpRequest>();
         const auth = request.auth;
         if (!auth) return null;
         return field ? auth[field] : auth;

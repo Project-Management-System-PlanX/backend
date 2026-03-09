@@ -38,7 +38,5 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
         TicketsModule,
         MessagesModule,
     ],
-    providers: [TeamsService, TicketsService],
-    controllers: [TeamsController, TicketsController],
 })
 export class AppModule {}

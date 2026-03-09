@@ -8,9 +8,14 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { Request } from 'express';
 import { UsersService } from '../users/users.service';
 import { IS_PUBLIC_KEY } from './public.decorator';
+
+/** Platform-agnostic request shape (works with Express and Fastify) */
+interface HttpRequest {
+    headers: { authorization?: string; [key: string]: unknown };
+    [key: string]: unknown;
+}
 
 export interface AuthUser {
     userId: string; // Supabase user ID (auth.users.id)
@@ -49,7 +54,7 @@ export class SupabaseAuthGuard implements CanActivate {
         ]);
         if (isPublic) return true;
 
-        const request = context.switchToHttp().getRequest<Request>();
+        const request = context.switchToHttp().getRequest<HttpRequest>();
         const authHeader = request.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -82,7 +87,7 @@ export class SupabaseAuthGuard implements CanActivate {
             };
 
             // Attach to request for @CurrentUser() decorator
-            (request as Request & { auth: AuthUser }).auth = authUser;
+            (request as unknown as { auth: AuthUser }).auth = authUser;
 
             // Auto-sync user to our DB (upsert) — fire and forget, non-blocking
             if (authUser.email) {
