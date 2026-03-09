@@ -165,4 +165,55 @@ export class MessagesService {
             },
         });
     }
+
+    async update(messageId: string, userId: string, content: string) {
+        if (!content) {
+            throw new ForbiddenException('Message content cannot be empty');
+        }
+
+        const message = await this.prisma.message.findUnique({
+            where: { id: messageId },
+        });
+
+        if (!message) {
+            throw new NotFoundException('Message not found');
+        }
+
+        if (message.userId !== userId) {
+            throw new ForbiddenException('You can only edit your own messages');
+        }
+
+        if (message.deletedAt) {
+            throw new ForbiddenException('Cannot edit a deleted message');
+        }
+
+        // Check if message is within the 15-minute edit window
+        const now = new Date();
+        const createdTime = new Date(message.createdAt);
+        const diffInMinutes = (now.getTime() - createdTime.getTime()) / (1000 * 60);
+
+        if (diffInMinutes > 15) {
+            throw new ForbiddenException('Messages can only be edited within 15 minutes of sending');
+        }
+
+        return this.prisma.message.update({
+            where: { id: messageId },
+            data: {
+                content,
+                isEdited: true,
+                updatedAt: now,
+            },
+            include: {
+                user: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        username: true,
+                        imageUrl: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+    }
 }

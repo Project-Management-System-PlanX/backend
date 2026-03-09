@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { MessagesService } from './messages.service';
 
@@ -52,5 +52,14 @@ export class MessagesController {
     @Delete(':id')
     delete(@Param('id') id: string, @CurrentUser('userId') userId: string) {
         return this.messagesService.softDelete(id, userId);
+    }
+
+    @Patch(':id')
+    update(
+        @Param('id') id: string,
+        @CurrentUser('userId') userId: string,
+        @Body() body: { content: string },
+    ) {
+        return this.messagesService.update(id, userId, body.content);
     }
 }
