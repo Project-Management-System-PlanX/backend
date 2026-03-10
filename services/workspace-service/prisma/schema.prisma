@@ -28,21 +28,21 @@ model User {
 }
 
 model Workspace {
-  id        String            @id @default(uuid())
-  name      String
-  slug      String            @unique
-  ownerId   String
-  avatar    String?
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  channels  Channel[]
-  meetings  meetings[]
-  spaces    Space[]
-  teams     Team[]
-  tickets   Ticket[]
-  invites   WorkspaceInvite[]
+  id               String            @id @default(uuid())
+  name             String
+  slug             String            @unique
+  ownerId          String
+  avatar           String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  channels         Channel[]
   emailInvitations EmailInvitation[]
-  members   WorkspaceMember[]
+  meetings         meetings[]
+  spaces           Space[]
+  teams            Team[]
+  tickets          Ticket[]
+  invites          WorkspaceInvite[]
+  members          WorkspaceMember[]
 
   @@map("workspaces")
 }
@@ -143,25 +143,25 @@ model GroupMember {
 }
 
 model Message {
-  id        String   @id
-  channelId String   @map("channel_id")
-  userId    String   @map("user_id")
+  id        String    @id
+  channelId String    @map("channel_id")
+  userId    String    @map("user_id")
   content   String
-  isEdited  Boolean  @default(false) @map("is_edited")
-  isPinned  Boolean  @default(false) @map("is_pinned")
+  isEdited  Boolean   @default(false) @map("is_edited")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @map("updated_at")
+  fileUrl   String?   @map("file_url")
+  fileName  String?   @map("file_name")
+  fileType  String?   @map("file_type")
+  fileSize  Int?      @map("file_size")
   deletedAt DateTime? @map("deleted_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @map("updated_at")
-  fileUrl   String?  @map("file_url")
-  fileName  String?  @map("file_name")
-  fileType  String?  @map("file_type")
-  fileSize  Int?     @map("file_size")
-  duration  Int?     @map("duration")
-  parentId  String?  @map("parent_id")
-  parent    Message? @relation("MessageReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  duration  Int?      @map("duration")
+  parentId  String?   @map("parent_id")
+  isPinned  Boolean   @default(false) @map("is_pinned")
+  channel   Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  parent    Message?  @relation("MessageReplies", fields: [parentId], references: [id])
   replies   Message[] @relation("MessageReplies")
-  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
 
   @@map("messages")
 }
