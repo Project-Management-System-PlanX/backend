@@ -62,4 +62,13 @@ export class MessagesController {
     ) {
         return this.messagesService.update(id, userId, body.content);
     }
+
+    @Patch(':id/pin')
+    togglePin(
+        @Param('id') id: string,
+        @CurrentUser('userId') userId: string,
+        @Body() body: { isPinned: boolean },
+    ) {
+        return this.messagesService.togglePin(id, userId, body.isPinned);
+    }
 }

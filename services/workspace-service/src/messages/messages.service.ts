@@ -216,4 +216,30 @@ export class MessagesService {
             },
         });
     }
+
+    async togglePin(messageId: string, userId: string, isPinned: boolean) {
+        const message = await this.prisma.message.findUnique({
+            where: { id: messageId },
+        });
+
+        if (!message) {
+            throw new NotFoundException('Message not found');
+        }
+
+        return this.prisma.message.update({
+            where: { id: messageId },
+            data: { isPinned },
+            include: {
+                user: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        username: true,
+                        imageUrl: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+    }
 }

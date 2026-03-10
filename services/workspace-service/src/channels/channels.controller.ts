@@ -51,4 +51,13 @@ export class ChannelsController {
     removeMember(@Param('channelId') channelId: string, @Param('userId') userId: string) {
         return this.channelsService.removeMember(channelId, userId);
     }
+
+    @Patch(':channelId/star')
+    toggleStar(
+        @Param('channelId') channelId: string,
+        @CurrentUser('userId') userId: string,
+        @Body() body: { isStarred: boolean },
+    ) {
+        return this.channelsService.toggleStar(channelId, userId, body.isStarred);
+    }
 }

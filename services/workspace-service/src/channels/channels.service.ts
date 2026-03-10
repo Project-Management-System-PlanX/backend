@@ -155,6 +155,21 @@ export class ChannelsService {
         });
     }
 
+    async toggleStar(channelId: string, userId: string, isStarred: boolean) {
+        return this.prisma.channelMember.upsert({
+            where: {
+                channelId_userId: { channelId, userId },
+            },
+            update: { isStarred },
+            create: {
+                channelId,
+                userId,
+                role: 'MEMBER',
+                isStarred,
+            },
+        });
+    }
+
     /**
      * Asserts that the user has permission to modify a channel.
      * Allowed: channel ADMIN, workspace OWNER, or workspace ADMIN.
