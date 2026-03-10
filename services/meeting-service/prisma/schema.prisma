@@ -10,12 +10,13 @@ datasource db {
 }
 
 model channel_members {
-  id        String   @id @default(uuid())
-  channelId String
-  userId    String
-  role      String   @default("MEMBER")
-  joinedAt  DateTime @default(now())
-  channels  channels @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  channelId  String
+  userId     String
+  role       String   @default("MEMBER")
+  joinedAt   DateTime @default(now())
+  is_starred Boolean  @default(false)
+  channels   channels @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   @@unique([channelId, userId])
 }
@@ -56,19 +57,25 @@ model groups {
 }
 
 model messages {
-  id         String   @id @default(uuid())
-  channel_id String
-  user_id    String
-  content    String
-  is_edited  Boolean  @default(false)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  file_url   String?
-  file_name  String?
-  file_type  String?
-  file_size  Int?
-  channels   channels @relation(fields: [channel_id], references: [id], onDelete: Cascade)
-  users      users    @relation(fields: [user_id], references: [supabaseId], onDelete: Cascade)
+  id             String     @id @default(uuid())
+  channel_id     String
+  user_id        String
+  content        String
+  is_edited      Boolean    @default(false)
+  created_at     DateTime   @default(now())
+  updated_at     DateTime   @updatedAt
+  file_url       String?
+  file_name      String?
+  file_type      String?
+  file_size      Int?
+  deleted_at     DateTime?
+  duration       Int?
+  parent_id      String?
+  is_pinned      Boolean    @default(false)
+  channels       channels   @relation(fields: [channel_id], references: [id], onDelete: Cascade)
+  messages       messages?  @relation("messagesTomessages", fields: [parent_id], references: [id])
+  other_messages messages[] @relation("messagesTomessages")
+  users          users      @relation(fields: [user_id], references: [supabaseId], onDelete: Cascade)
 }
 
 model spaces {
@@ -122,40 +129,55 @@ model task_statuses {
 }
 
 model tasks {
-  id            String          @id @default(uuid())
-  spaceId       String
-  statusId      String
-  title         String
-  description   String?
-  taskNumber    Int
-  priority      String          @default("NONE")
-  assigneeId    String?
-  reporterId    String
-  dueDate       DateTime?
-  resolution    String          @default("UNRESOLVED")
-  position      Int             @default(0)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  task_comments task_comments[]
-  task_labels   task_labels[]
-  spaces        spaces          @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  task_statuses task_statuses   @relation(fields: [statusId], references: [id])
+  id                                      String             @id @default(uuid())
+  spaceId                                 String
+  statusId                                String
+  title                                   String
+  description                             String?
+  taskNumber                              Int
+  priority                                String             @default("NONE")
+  assigneeId                              String?
+  reporterId                              String
+  dueDate                                 DateTime?
+  resolution                              String             @default("UNRESOLVED")
+  position                                Int                @default(0)
+  createdAt                               DateTime           @default(now())
+  updatedAt                               DateTime           @updatedAt
+  workType                                String             @default("TASK")
+  startDate                               DateTime?
+  parentId                                String?
+  teamId                                  String?
+  flagged                                 Boolean            @default(false)
+  restrictTo                              String?
+  task_attachments                        task_attachments[]
+  task_comments                           task_comments[]
+  task_labels                             task_labels[]
+  task_links_task_links_fromTaskIdTotasks task_links[]       @relation("task_links_fromTaskIdTotasks")
+  task_links_task_links_toTaskIdTotasks   task_links[]       @relation("task_links_toTaskIdTotasks")
+  tasks                                   tasks?             @relation("tasksTotasks", fields: [parentId], references: [id])
+  other_tasks                             tasks[]            @relation("tasksTotasks")
+  spaces                                  spaces             @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  task_statuses                           task_statuses      @relation(fields: [statusId], references: [id])
+  teams                                   teams?             @relation(fields: [teamId], references: [id])
 
   @@unique([spaceId, taskNumber])
 }
 
 model users {
-  id                String              @id @default(uuid())
-  email             String              @unique
-  firstName         String?
-  lastName          String?
-  username          String?
-  imageUrl          String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  supabaseId        String              @unique
-  messages          messages[]
-  workspace_members workspace_members[]
+  id                                String              @id @default(uuid())
+  email                             String              @unique
+  firstName                         String?
+  lastName                          String?
+  username                          String?
+  imageUrl                          String?
+  createdAt                         DateTime            @default(now())
+  updatedAt                         DateTime            @updatedAt
+  supabaseId                        String              @unique
+  messages                          messages[]
+  team_members                      team_members[]
+  tickets_tickets_assignedToTousers tickets[]           @relation("tickets_assignedToTousers")
+  tickets_tickets_createdByTousers  tickets[]           @relation("tickets_createdByTousers")
+  workspace_members                 workspace_members[]
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -192,13 +214,125 @@ model workspaces {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   channels          channels[]
+  email_invitations email_invitations[]
+  meetings          meetings[]
   spaces            spaces[]
+  teams             teams[]
+  tickets           tickets[]
   workspace_invites workspace_invites[]
   workspace_members workspace_members[]
-  meetings          meetings[]
 }
 
-// ==================== MEETING SERVICE MODELS ====================
+model meetings {
+  id           String                 @id @default(dbgenerated("(gen_random_uuid())::text"))
+  roomId       String                 @unique @map("room_id")
+  title        String
+  type         MeetingType            @default(VIDEO)
+  status       MeetingStatus          @default(ACTIVE)
+  groupId      String?                @map("group_id")
+  channelId    String?                @map("channel_id")
+  workspaceId  String?                @map("workspace_id")
+  createdById  String                 @map("created_by_id")
+  startedAt    DateTime               @default(now()) @map("started_at") @db.Timestamptz(6)
+  endedAt      DateTime?              @map("ended_at") @db.Timestamptz(6)
+  duration     Int?
+  createdAt    DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  participants meeting_participants[]
+  workspace    workspaces?            @relation(fields: [workspaceId], references: [id], onUpdate: NoAction)
+
+  @@index([status])
+  @@index([roomId])
+  @@index([groupId])
+}
+
+model meeting_participants {
+  id        String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  meetingId String    @map("meeting_id")
+  userId    String    @map("user_id")
+  joinedAt  DateTime  @default(now()) @map("joined_at") @db.Timestamptz(6)
+  leftAt    DateTime? @map("left_at") @db.Timestamptz(6)
+  duration  Int?
+  meeting   meetings  @relation(fields: [meetingId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([meetingId, userId])
+  @@index([meetingId])
+  @@index([userId])
+}
+
+model email_invitations {
+  id           String     @id @default(dbgenerated("(gen_random_uuid())::text"))
+  workspace_id String
+  email        String
+  invited_by   String
+  invite_token String
+  status       String     @default("PENDING")
+  channel_ids  String[]   @default([])
+  sent_at      DateTime   @default(now()) @db.Timestamp(6)
+  accepted_at  DateTime?  @db.Timestamp(6)
+  workspaces   workspaces @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+}
+
+model task_attachments {
+  id        String   @id
+  taskId    String
+  fileName  String
+  fileUrl   String
+  fileType  String?
+  fileSize  Int?
+  createdAt DateTime @default(now())
+  tasks     tasks    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model task_links {
+  id                                 String @id
+  fromTaskId                         String
+  toTaskId                           String
+  linkType                           String @default("BLOCKS")
+  tasks_task_links_fromTaskIdTotasks tasks  @relation("task_links_fromTaskIdTotasks", fields: [fromTaskId], references: [id], onDelete: Cascade)
+  tasks_task_links_toTaskIdTotasks   tasks  @relation("task_links_toTaskIdTotasks", fields: [toTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([fromTaskId, toTaskId])
+}
+
+model team_members {
+  id       String   @id
+  teamId   String
+  userId   String
+  role     String   @default("MEMBER")
+  joinedAt DateTime @default(now())
+  teams    teams    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  users    users    @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model teams {
+  id           String         @id
+  workspaceId  String
+  name         String
+  description  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  tasks        tasks[]
+  team_members team_members[]
+  workspaces   workspaces     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model tickets {
+  id                              String     @id
+  workspaceId                     String
+  title                           String
+  description                     String
+  status                          String     @default("OPEN")
+  priority                        String     @default("MEDIUM")
+  createdBy                       String
+  assignedTo                      String?
+  createdAt                       DateTime   @default(now())
+  updatedAt                       DateTime
+  users_tickets_assignedToTousers users?     @relation("tickets_assignedToTousers", fields: [assignedTo], references: [supabaseId])
+  users_tickets_createdByTousers  users      @relation("tickets_createdByTousers", fields: [createdBy], references: [supabaseId])
+  workspaces                      workspaces @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
 
 enum MeetingType {
   VIDEO
@@ -208,42 +342,4 @@ enum MeetingType {
 enum MeetingStatus {
   ACTIVE
   ENDED
-}
-
-model meetings {
-  id          String        @id @default(uuid())
-  roomId      String        @unique @map("room_id")
-  title       String
-  type        MeetingType   @default(VIDEO)
-  status      MeetingStatus @default(ACTIVE)
-  groupId     String?       @map("group_id")
-  channelId   String?       @map("channel_id")
-  workspaceId String?       @map("workspace_id")
-  createdById String        @map("created_by_id")
-  startedAt   DateTime      @default(now()) @map("started_at")
-  endedAt     DateTime?     @map("ended_at")
-  duration    Int?
-  createdAt   DateTime      @default(now()) @map("created_at")
-
-  workspace    workspaces?           @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
-  participants meeting_participants[]
-
-  @@index([status])
-  @@index([roomId])
-  @@index([groupId])
-}
-
-model meeting_participants {
-  id        String    @id @default(uuid())
-  meetingId String    @map("meeting_id")
-  userId    String    @map("user_id")
-  joinedAt  DateTime  @default(now()) @map("joined_at")
-  leftAt    DateTime? @map("left_at")
-  duration  Int?
-
-  meeting meetings @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-
-  @@unique([meetingId, userId])
-  @@index([meetingId])
-  @@index([userId])
 }
