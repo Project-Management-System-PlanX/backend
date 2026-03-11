@@ -74,16 +74,28 @@ export class SupabaseAuthGuard implements CanActivate {
             }
 
             // Extract user profile claims from Supabase user_metadata
+            const metadata = user.user_metadata || {};
+            const identityData = user.identities?.[0]?.identity_data || {};
+
             const authUser: AuthUser = {
                 userId: user.id,
                 email: user.email || '',
                 firstName:
-                    user.user_metadata?.first_name || user.user_metadata?.full_name?.split(' ')[0],
+                    metadata.first_name ||
+                    metadata.full_name?.split(' ')[0] ||
+                    identityData.first_name ||
+                    identityData.full_name?.split(' ')[0],
                 lastName:
-                    user.user_metadata?.last_name ||
-                    user.user_metadata?.full_name?.split(' ').slice(1).join(' '),
-                username: user.user_metadata?.username,
-                imageUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+                    metadata.last_name ||
+                    metadata.full_name?.split(' ').slice(1).join(' ') ||
+                    identityData.last_name ||
+                    identityData.full_name?.split(' ').slice(1).join(' '),
+                username: metadata.username || identityData.user_name || identityData.preferred_username,
+                imageUrl:
+                    metadata.avatar_url ||
+                    metadata.picture ||
+                    identityData.avatar_url ||
+                    identityData.picture,
             };
 
             // Attach to request for @CurrentUser() decorator
