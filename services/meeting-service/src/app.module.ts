@@ -1,4 +1,3 @@
-import { join } from 'node:path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LivekitModule } from './livekit/livekit.module';
@@ -9,7 +8,7 @@ import { PrismaModule } from './prisma/prisma.module';
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
-            envFilePath: join(__dirname, '..', '.env'),
+            envFilePath: ['.env', '../../.env'],
         }),
         PrismaModule,
         LivekitModule,
@@ -18,4 +17,4 @@ import { PrismaModule } from './prisma/prisma.module';
     controllers: [],
     providers: [],
 })
-export class AppModule {}
+export class AppModule { }

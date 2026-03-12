@@ -1,10 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { MessagesService } from './messages.service';
+import { ReadStateService } from './read-state.service';
 
 @Controller('messages')
 export class MessagesController {
-    constructor(private readonly messagesService: MessagesService) {}
+    constructor(
+        private readonly messagesService: MessagesService,
+        private readonly readStateService: ReadStateService,
+    ) { }
 
     @Post()
     create(
@@ -22,12 +26,12 @@ export class MessagesController {
     ) {
         const fileDetails = body.fileUrl
             ? {
-                  fileUrl: body.fileUrl,
-                  fileName: body.fileName || '',
-                  fileType: body.fileType || '',
-                  fileSize: body.fileSize || 0,
-                  duration: body.duration,
-              }
+                fileUrl: body.fileUrl,
+                fileName: body.fileName || '',
+                fileType: body.fileType || '',
+                fileSize: body.fileSize || 0,
+                duration: body.duration,
+            }
             : undefined;
 
         return this.messagesService.create(
@@ -70,5 +74,31 @@ export class MessagesController {
         @Body() body: { isPinned: boolean },
     ) {
         return this.messagesService.togglePin(id, userId, body.isPinned);
+    }
+
+    // ── Read State Endpoints ──
+
+    @Post('read')
+    markAsRead(
+        @CurrentUser('userId') userId: string,
+        @Body() body: { channelId: string; messageId?: string },
+    ) {
+        return this.readStateService.markAsRead(body.channelId, userId, body.messageId);
+    }
+
+    @Get('unread-counts/:workspaceId')
+    getUnreadCounts(
+        @CurrentUser('userId') userId: string,
+        @Param('workspaceId') workspaceId: string,
+    ) {
+        return this.readStateService.getUnreadCounts(userId, workspaceId);
+    }
+
+    @Get('read-state/:channelId')
+    getReadState(
+        @CurrentUser('userId') userId: string,
+        @Param('channelId') channelId: string,
+    ) {
+        return this.readStateService.getReadState(channelId, userId);
     }
 }

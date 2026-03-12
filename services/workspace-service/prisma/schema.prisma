@@ -23,6 +23,7 @@ model User {
   assignedTickets  Ticket[]          @relation("TicketAssignee")
   createdTickets   Ticket[]          @relation("TicketCreator")
   workspaceMembers WorkspaceMember[]
+  readStates       MessageReadState[]
 
   @@map("users")
 }
@@ -101,6 +102,7 @@ model Channel {
   workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   groups      Group[]
   messages    Message[]
+  readStates  MessageReadState[]
 
   @@map("channels")
 }
@@ -372,4 +374,20 @@ enum MeetingStatus {
 enum MeetingType {
   VIDEO
   AUDIO
+}
+
+model MessageReadState {
+  id                String   @id @default(uuid())
+  channelId         String
+  userId            String
+  lastReadAt        DateTime @default(now()) @map("last_read_at")
+  lastReadMessageId String?  @map("last_read_message_id")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  channel           Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [supabaseId])
+
+  @@unique([channelId, userId])
+  @@index([userId])
+  @@map("message_read_states")
 }
