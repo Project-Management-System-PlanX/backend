@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MessageReadState } from '@prisma/client';
 
 @Injectable()
 export class ReadStateService {
@@ -51,7 +52,10 @@ export class ReadStateService {
             },
         });
 
-        const readStateMap = new Map(readStates.map((rs) => [rs.channelId, rs]));
+
+        const readStateMap = new Map<string, MessageReadState>(
+            readStates.map((rs) => [rs.channelId, rs]),
+        );
 
         // Count unread messages for each channel
         const results = await Promise.all(
@@ -83,7 +87,7 @@ export class ReadStateService {
     /**
      * Get the read state for a specific channel and user
      */
-    async getReadState(channelId: string, userId: string) {
+    async getReadState(channelId: string, userId: string): Promise<MessageReadState | null> {
         return this.prisma.messageReadState.findUnique({
             where: {
                 channelId_userId: { channelId, userId },
