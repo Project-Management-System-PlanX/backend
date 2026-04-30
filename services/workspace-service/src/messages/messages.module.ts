@@ -10,4 +10,4 @@ import { ReadStateService } from './read-state.service';
     providers: [MessagesService, ReadStateService],
     exports: [MessagesService, ReadStateService],
 })
-export class MessagesModule { }
+export class MessagesModule {}

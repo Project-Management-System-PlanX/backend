@@ -8,7 +8,7 @@ export class MessagesController {
     constructor(
         private readonly messagesService: MessagesService,
         private readonly readStateService: ReadStateService,
-    ) { }
+    ) {}
 
     @Post()
     create(
@@ -26,12 +26,12 @@ export class MessagesController {
     ) {
         const fileDetails = body.fileUrl
             ? {
-                fileUrl: body.fileUrl,
-                fileName: body.fileName || '',
-                fileType: body.fileType || '',
-                fileSize: body.fileSize || 0,
-                duration: body.duration,
-            }
+                  fileUrl: body.fileUrl,
+                  fileName: body.fileName || '',
+                  fileType: body.fileType || '',
+                  fileSize: body.fileSize || 0,
+                  duration: body.duration,
+              }
             : undefined;
 
         return this.messagesService.create(
@@ -95,10 +95,7 @@ export class MessagesController {
     }
 
     @Get('read-state/:channelId')
-    getReadState(
-        @CurrentUser('userId') userId: string,
-        @Param('channelId') channelId: string,
-    ) {
+    getReadState(@CurrentUser('userId') userId: string, @Param('channelId') channelId: string) {
         return this.readStateService.getReadState(channelId, userId);
     }
 }
