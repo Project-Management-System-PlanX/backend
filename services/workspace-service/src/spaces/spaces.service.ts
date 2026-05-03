@@ -64,9 +64,9 @@ export class SpacesService {
                 createdBy: userId,
                 statuses: {
                     create: [
-                        { name: 'To Do', color: '#94A3B8', position: 0, isDone: false },
-                        { name: 'In Progress', color: '#3B82F6', position: 1, isDone: false },
-                        { name: 'In Review', color: '#F59E0B', position: 2, isDone: false },
+                        { name: 'Today', color: '#A16207', position: 0, isDone: false },
+                        { name: 'This Week', color: '#166534', position: 1, isDone: false },
+                        { name: 'Later', color: '#111111', position: 2, isDone: false },
                         { name: 'Done', color: '#0B6E4F', position: 3, isDone: true },
                     ],
                 },
@@ -89,6 +89,7 @@ export class SpacesService {
         return this.prisma.space.findMany({
             where: { workspaceId },
             include: {
+                statuses: { orderBy: { position: 'asc' } },
                 _count: { select: { tasks: true } },
             },
             orderBy: { createdAt: 'desc' },

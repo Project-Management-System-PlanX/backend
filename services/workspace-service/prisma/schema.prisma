@@ -183,6 +183,7 @@ model Space {
   workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   statuses    TaskStatus[]
   tasks       Task[]
+  boards      Board[]
 
   @@unique([workspaceId, prefix])
   @@map("spaces")
@@ -233,6 +234,8 @@ model Task {
   space       Space            @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   status      TaskStatus       @relation(fields: [statusId], references: [id])
   team        Team?            @relation(fields: [teamId], references: [id])
+  checklists  Checklist[]
+  activities  ActivityLog[]
 
   @@unique([spaceId, taskNumber])
   @@map("tasks")
@@ -390,4 +393,75 @@ model MessageReadState {
   @@unique([channelId, userId])
   @@index([userId])
   @@map("message_read_states")
+}
+
+// ─── Boards (Kanban view persistence) ───
+
+model Board {
+  id          String        @id @default(uuid())
+  spaceId     String
+  name        String        @default("Board")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  space       Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  columns     BoardColumn[]
+
+  @@map("boards")
+}
+
+model BoardColumn {
+  id       String @id @default(uuid())
+  boardId  String
+  statusId String
+  position Int    @default(0)
+  board    Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, statusId])
+  @@map("board_columns")
+}
+
+// ─── Checklists ───
+
+model Checklist {
+  id        String          @id @default(uuid())
+  taskId    String
+  title     String          @default("Checklist")
+  position  Int             @default(0)
+  createdAt DateTime        @default(now())
+  task      Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  items     ChecklistItem[]
+
+  @@map("checklists")
+}
+
+model ChecklistItem {
+  id          String    @id @default(uuid())
+  checklistId String
+  content     String
+  isComplete  Boolean   @default(false)
+  position    Int       @default(0)
+  assigneeId  String?
+  dueDate     DateTime?
+  checklist   Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_items")
+}
+
+// ─── Activity Log ───
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  taskId     String
+  userId     String
+  action     String
+  field      String?
+  oldValue   String?
+  newValue   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId])
+  @@map("activity_logs")
 }

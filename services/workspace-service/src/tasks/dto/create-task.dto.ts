@@ -1,62 +1,52 @@
-import { IsArray, IsBoolean, IsDateString, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDateString, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateTaskDto {
     @IsString()
     spaceId: string;
 
     @IsString()
+    statusId: string;
+
+    @IsString()
     title: string;
 
-    @IsString()
     @IsOptional()
+    @IsString()
     description?: string;
 
-    @IsString()
     @IsOptional()
-    priority?: string; // NONE, LOW, MEDIUM, HIGH, CRITICAL
+    @IsString()
+    priority?: string;
 
-    @IsString()
     @IsOptional()
-    workType?: string; // TASK, STORY, BUG, EPIC, SUBTASK
+    @IsString()
+    workType?: string;
 
-    @IsString()
     @IsOptional()
+    @IsString()
     assigneeId?: string;
 
-    @IsDateString()
     @IsOptional()
+    @IsDateString()
     dueDate?: string;
 
-    @IsDateString()
     @IsOptional()
+    @IsDateString()
     startDate?: string;
 
-    @IsNumber()
     @IsOptional()
+    @IsNumber()
     position?: number;
 
-    @IsString()
     @IsOptional()
-    statusId?: string;
-
     @IsString()
-    @IsOptional()
     parentId?: string;
 
-    @IsString()
     @IsOptional()
+    @IsString()
     teamId?: string;
 
+    @IsOptional()
     @IsBoolean()
-    @IsOptional()
     flagged?: boolean;
-
-    @IsString()
-    @IsOptional()
-    restrictTo?: string;
-
-    @IsArray()
-    @IsString({ each: true })
-    @IsOptional()
-    labels?: string[];
 }

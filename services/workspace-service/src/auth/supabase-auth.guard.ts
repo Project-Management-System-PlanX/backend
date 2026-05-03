@@ -90,7 +90,8 @@ export class SupabaseAuthGuard implements CanActivate {
                     metadata.full_name?.split(' ').slice(1).join(' ') ||
                     identityData.last_name ||
                     identityData.full_name?.split(' ').slice(1).join(' '),
-                username: metadata.username || identityData.user_name || identityData.preferred_username,
+                username:
+                    metadata.username || identityData.user_name || identityData.preferred_username,
                 imageUrl:
                     metadata.avatar_url ||
                     metadata.picture ||

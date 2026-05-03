@@ -195,7 +195,9 @@ export class MessagesService {
         const diffInMinutes = (now.getTime() - createdTime.getTime()) / (1000 * 60);
 
         if (diffInMinutes > 15) {
-            throw new ForbiddenException('Messages can only be edited within 15 minutes of sending');
+            throw new ForbiddenException(
+                'Messages can only be edited within 15 minutes of sending',
+            );
         }
 
         return this.prisma.message.update({

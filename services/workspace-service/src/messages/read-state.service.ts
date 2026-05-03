@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { MessageReadState } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ReadStateService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     /**
      * Mark a channel as read for a user (upsert)
@@ -51,7 +51,6 @@ export class ReadStateService {
                 channelId: { in: channelIds },
             },
         });
-
 
         const readStateMap = new Map<string, MessageReadState>(
             readStates.map((rs) => [rs.channelId, rs]),
