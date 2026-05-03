@@ -1,0 +1,348 @@
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { BulkPositionDto, MoveTaskDto } from './dto/move-task.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
+
+const TASK_INCLUDE = {
+    status: true,
+    labels: true,
+    comments: { orderBy: { createdAt: 'desc' as const }, take: 5 },
+    attachments: true,
+    parent: { select: { id: true, title: true, taskNumber: true } },
+    children: { select: { id: true, title: true, taskNumber: true, statusId: true } },
+    team: { select: { id: true, name: true } },
+    checklists: {
+        include: { items: { orderBy: { position: 'asc' as const } } },
+        orderBy: { position: 'asc' as const },
+    },
+};
+
+@Injectable()
+export class TasksService {
+    constructor(private readonly prisma: PrismaService) {}
+
+    // ─── Access Check ───
+
+    private async checkSpaceAccess(spaceId: string, userId: string) {
+        const space = await this.prisma.space.findUnique({
+            where: { id: spaceId },
+            include: {
+                workspace: { include: { members: { where: { userId } } } },
+            },
+        });
+
+        if (!space) throw new NotFoundException('Space not found');
+        if (space.workspace.members.length === 0) {
+            throw new ForbiddenException('No access to this space');
+        }
+        return space;
+    }
+
+    private async getTaskWithAccess(taskId: string, userId: string) {
+        const task = await this.prisma.task.findUnique({
+            where: { id: taskId },
+            include: {
+                space: {
+                    include: {
+                        workspace: { include: { members: { where: { userId } } } },
+                    },
+                },
+            },
+        });
+
+        if (!task) throw new NotFoundException('Task not found');
+        if (task.space.workspace.members.length === 0) {
+            throw new ForbiddenException('No access to this task');
+        }
+        return task;
+    }
+
+    // ─── CRUD ───
+
+    async create(userId: string, dto: CreateTaskDto) {
+        await this.checkSpaceAccess(dto.spaceId, userId);
+
+        // Auto-increment task number
+        const space = await this.prisma.space.findUnique({
+            where: { id: dto.spaceId },
+        });
+        const nextNumber = (space?.taskCounter ?? 0) + 1;
+
+        // Auto-assign position if not provided
+        let position = dto.position;
+        if (position === undefined) {
+            const lastTask = await this.prisma.task.findFirst({
+                where: { spaceId: dto.spaceId, statusId: dto.statusId },
+                orderBy: { position: 'desc' },
+            });
+            position = lastTask ? lastTask.position + 65536 : 65536;
+        }
+
+        const [task] = await this.prisma.$transaction([
+            this.prisma.task.create({
+                data: {
+                    spaceId: dto.spaceId,
+                    statusId: dto.statusId,
+                    title: dto.title,
+                    description: dto.description,
+                    priority: dto.priority || 'NONE',
+                    workType: dto.workType || 'TASK',
+                    assigneeId: dto.assigneeId,
+                    reporterId: userId,
+                    dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+                    startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+                    position,
+                    parentId: dto.parentId,
+                    teamId: dto.teamId,
+                    flagged: dto.flagged || false,
+                    taskNumber: nextNumber,
+                },
+                include: TASK_INCLUDE,
+            }),
+            this.prisma.space.update({
+                where: { id: dto.spaceId },
+                data: { taskCounter: nextNumber },
+            }),
+        ]);
+
+        // Log activity
+        await this.logActivity(task.id, userId, 'CREATED', null, null, task.title);
+
+        return task;
+    }
+
+    async findAllBySpace(spaceId: string, userId: string) {
+        await this.checkSpaceAccess(spaceId, userId);
+
+        return this.prisma.task.findMany({
+            where: { spaceId },
+            include: TASK_INCLUDE,
+            orderBy: { position: 'asc' },
+        });
+    }
+
+    async findOne(id: string, userId: string) {
+        await this.getTaskWithAccess(id, userId);
+
+        return this.prisma.task.findUnique({
+            where: { id },
+            include: {
+                ...TASK_INCLUDE,
+                comments: {
+                    orderBy: { createdAt: 'desc' as const },
+                },
+            },
+        });
+    }
+
+    async update(id: string, userId: string, dto: UpdateTaskDto) {
+        const existing = await this.getTaskWithAccess(id, userId);
+
+        // Track changes for activity log
+        const changes: Array<{ field: string; oldValue: string; newValue: string }> = [];
+
+        for (const [key, value] of Object.entries(dto)) {
+            if (value !== undefined && (existing as any)[key] !== value) {
+                changes.push({
+                    field: key,
+                    oldValue: String((existing as any)[key] ?? ''),
+                    newValue: String(value),
+                });
+            }
+        }
+
+        const data: any = { ...dto };
+        if (dto.dueDate) data.dueDate = new Date(dto.dueDate);
+        if (dto.startDate) data.startDate = new Date(dto.startDate);
+        if (dto.dueDate === null) data.dueDate = null;
+        if (dto.startDate === null) data.startDate = null;
+
+        const task = await this.prisma.task.update({
+            where: { id },
+            data,
+            include: TASK_INCLUDE,
+        });
+
+        // Log each field change
+        for (const change of changes) {
+            await this.logActivity(
+                id,
+                userId,
+                'UPDATED',
+                change.field,
+                change.oldValue,
+                change.newValue,
+            );
+        }
+
+        return task;
+    }
+
+    async remove(id: string, userId: string) {
+        await this.getTaskWithAccess(id, userId);
+        await this.prisma.task.delete({ where: { id } });
+        return { deleted: true };
+    }
+
+    // ─── Drag-and-Drop ───
+
+    async moveTask(id: string, userId: string, dto: MoveTaskDto) {
+        const existing = await this.getTaskWithAccess(id, userId);
+
+        const oldStatusId = existing.statusId;
+
+        const task = await this.prisma.task.update({
+            where: { id },
+            data: {
+                statusId: dto.statusId,
+                position: dto.position,
+                parentId: dto.parentId !== undefined ? dto.parentId : undefined,
+            },
+            include: TASK_INCLUDE,
+        });
+
+        if (oldStatusId !== dto.statusId) {
+            await this.logActivity(id, userId, 'MOVED', 'statusId', oldStatusId, dto.statusId);
+        }
+
+        return task;
+    }
+
+    async bulkUpdatePositions(userId: string, dto: BulkPositionDto) {
+        // Verify access to at least one task
+        if (dto.updates.length > 0) {
+            await this.getTaskWithAccess(dto.updates[0].id, userId);
+        }
+
+        const ops = dto.updates.map((u) =>
+            this.prisma.task.update({
+                where: { id: u.id },
+                data: { statusId: u.statusId, position: u.position },
+            }),
+        );
+
+        await this.prisma.$transaction(ops);
+
+        return { updated: dto.updates.length };
+    }
+
+    // ─── Assigned / Worked-on ───
+
+    async findAssignedToMe(userId: string, workspaceId: string) {
+        return this.prisma.task.findMany({
+            where: {
+                assigneeId: userId,
+                space: { workspaceId },
+            },
+            include: TASK_INCLUDE,
+            orderBy: { updatedAt: 'desc' },
+        });
+    }
+
+    async findWorkedOn(userId: string, workspaceId: string) {
+        return this.prisma.task.findMany({
+            where: {
+                space: { workspaceId },
+                OR: [{ assigneeId: userId }, { reporterId: userId }],
+            },
+            include: TASK_INCLUDE,
+            orderBy: { updatedAt: 'desc' },
+            take: 50,
+        });
+    }
+
+    // ─── Comments ───
+
+    async addComment(taskId: string, userId: string, dto: CreateCommentDto) {
+        await this.getTaskWithAccess(taskId, userId);
+
+        const comment = await this.prisma.taskComment.create({
+            data: {
+                taskId,
+                userId,
+                content: dto.content,
+            },
+        });
+
+        await this.logActivity(
+            taskId,
+            userId,
+            'COMMENTED',
+            null,
+            null,
+            dto.content.substring(0, 100),
+        );
+
+        return comment;
+    }
+
+    async getComments(taskId: string, userId: string) {
+        await this.getTaskWithAccess(taskId, userId);
+
+        return this.prisma.taskComment.findMany({
+            where: { taskId },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
+    async deleteComment(taskId: string, commentId: string, userId: string) {
+        await this.getTaskWithAccess(taskId, userId);
+
+        const comment = await this.prisma.taskComment.findUnique({
+            where: { id: commentId },
+        });
+
+        if (!comment || comment.taskId !== taskId) {
+            throw new NotFoundException('Comment not found');
+        }
+
+        await this.prisma.taskComment.delete({ where: { id: commentId } });
+        return { deleted: true };
+    }
+
+    // ─── Labels ───
+
+    async addLabel(taskId: string, userId: string, name: string, color: string) {
+        await this.getTaskWithAccess(taskId, userId);
+        return this.prisma.taskLabel.create({
+            data: { taskId, name, color },
+        });
+    }
+
+    async removeLabel(taskId: string, labelId: string, userId: string) {
+        await this.getTaskWithAccess(taskId, userId);
+        await this.prisma.taskLabel.delete({ where: { id: labelId } });
+        return { deleted: true };
+    }
+
+    // ─── Activity Log ───
+
+    async getActivities(taskId: string, userId: string) {
+        await this.getTaskWithAccess(taskId, userId);
+
+        return this.prisma.activityLog.findMany({
+            where: { taskId },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+        });
+    }
+
+    private async logActivity(
+        taskId: string,
+        userId: string,
+        action: string,
+        field: string | null,
+        oldValue: string | null,
+        newValue: string | null,
+    ) {
+        try {
+            await this.prisma.activityLog.create({
+                data: { taskId, userId, action, field, oldValue, newValue },
+            });
+        } catch {
+            // Activity logging should never block the main operation
+        }
+    }
+}
