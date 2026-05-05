@@ -24,6 +24,7 @@ model User {
   createdTickets   Ticket[]          @relation("TicketCreator")
   workspaceMembers WorkspaceMember[]
   readStates       MessageReadState[]
+  taskMembers      TaskMember[]
 
   @@map("users")
 }
@@ -236,6 +237,7 @@ model Task {
   team        Team?            @relation(fields: [teamId], references: [id])
   checklists  Checklist[]
   activities  ActivityLog[]
+  assignees   TaskMember[]
 
   @@unique([spaceId, taskNumber])
   @@map("tasks")
@@ -464,4 +466,16 @@ model ActivityLog {
   @@index([taskId])
   @@index([userId])
   @@map("activity_logs")
+}
+
+model TaskMember {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  joinedAt  DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@map("task_members")
 }

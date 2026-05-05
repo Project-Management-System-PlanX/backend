@@ -12,6 +12,7 @@ const TASK_INCLUDE = {
     attachments: true,
     parent: { select: { id: true, title: true, taskNumber: true } },
     children: { select: { id: true, title: true, taskNumber: true, statusId: true } },
+    assignees: { include: { user: true } },
     team: { select: { id: true, name: true } },
     checklists: {
         include: { items: { orderBy: { position: 'asc' as const } } },
@@ -314,6 +315,24 @@ export class TasksService {
     async removeLabel(taskId: string, labelId: string, userId: string) {
         await this.getTaskWithAccess(taskId, userId);
         await this.prisma.taskLabel.delete({ where: { id: labelId } });
+        return { deleted: true };
+    }
+
+    // ─── Members ───
+
+    async addMember(taskId: string, memberUserId: string, userId: string) {
+        await this.getTaskWithAccess(taskId, userId);
+        return this.prisma.taskMember.create({
+            data: { taskId, userId: memberUserId },
+            include: { user: true },
+        });
+    }
+
+    async removeMember(taskId: string, memberUserId: string, userId: string) {
+        await this.getTaskWithAccess(taskId, userId);
+        await this.prisma.taskMember.delete({
+            where: { taskId_userId: { taskId, userId: memberUserId } },
+        });
         return { deleted: true };
     }
 

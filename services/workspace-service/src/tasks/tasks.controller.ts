@@ -113,6 +113,26 @@ export class TasksController {
         return this.tasksService.removeLabel(id, labelId, userId);
     }
 
+    // ─── Members ───
+
+    @Post(':id/members')
+    addMember(
+        @CurrentUser('userId') userId: string,
+        @Param('id') id: string,
+        @Body('userId') memberUserId: string,
+    ) {
+        return this.tasksService.addMember(id, memberUserId, userId);
+    }
+
+    @Delete(':id/members/:memberUserId')
+    removeMember(
+        @CurrentUser('userId') userId: string,
+        @Param('id') id: string,
+        @Param('memberUserId') memberUserId: string,
+    ) {
+        return this.tasksService.removeMember(id, memberUserId, userId);
+    }
+
     // ─── Activities ───
 
     @Get(':id/activities')
