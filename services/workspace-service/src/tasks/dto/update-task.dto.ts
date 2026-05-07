@@ -64,4 +64,8 @@ export class UpdateTaskDto {
     @IsOptional()
     @IsString()
     restrictTo?: string;
+
+    @IsOptional()
+    @IsString()
+    coverColor?: string;
 }

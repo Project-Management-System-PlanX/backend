@@ -65,24 +65,26 @@ export class TasksService {
     async create(userId: string, dto: CreateTaskDto) {
         await this.checkSpaceAccess(dto.spaceId, userId);
 
-        // Auto-increment task number
-        const space = await this.prisma.space.findUnique({
-            where: { id: dto.spaceId },
-        });
-        const nextNumber = (space?.taskCounter ?? 0) + 1;
-
-        // Auto-assign position if not provided
-        let position = dto.position;
-        if (position === undefined) {
-            const lastTask = await this.prisma.task.findFirst({
-                where: { spaceId: dto.spaceId, statusId: dto.statusId },
-                orderBy: { position: 'desc' },
+        const task = await this.prisma.$transaction(async (tx) => {
+            // Get current max task number within transaction for atomicity
+            const space = await tx.space.findUnique({
+                where: { id: dto.spaceId },
+                select: { taskCounter: true },
             });
-            position = lastTask ? lastTask.position + 65536 : 65536;
-        }
+            const nextNumber = (space?.taskCounter ?? 0) + 1;
 
-        const [task] = await this.prisma.$transaction([
-            this.prisma.task.create({
+            // Auto-assign position if not provided
+            let position = dto.position;
+            if (position === undefined) {
+                const lastTask = await tx.task.findFirst({
+                    where: { spaceId: dto.spaceId, statusId: dto.statusId },
+                    orderBy: { position: 'desc' },
+                });
+                position = lastTask ? lastTask.position + 65536 : 65536;
+            }
+
+            // Create task
+            const newTask = await tx.task.create({
                 data: {
                     spaceId: dto.spaceId,
                     statusId: dto.statusId,
@@ -101,12 +103,16 @@ export class TasksService {
                     taskNumber: nextNumber,
                 },
                 include: TASK_INCLUDE,
-            }),
-            this.prisma.space.update({
+            });
+
+            // Update space counter
+            await tx.space.update({
                 where: { id: dto.spaceId },
                 data: { taskCounter: nextNumber },
-            }),
-        ]);
+            });
+
+            return newTask;
+        });
 
         // Log activity
         await this.logActivity(task.id, userId, 'CREATED', null, null, task.title);
@@ -314,7 +320,11 @@ export class TasksService {
 
     async removeLabel(taskId: string, labelId: string, userId: string) {
         await this.getTaskWithAccess(taskId, userId);
-        await this.prisma.taskLabel.delete({ where: { id: labelId } });
+        try {
+            await this.prisma.taskLabel.delete({ where: { id: labelId } });
+        } catch (err) {
+            // If label is already gone, that's fine
+        }
         return { deleted: true };
     }
 
@@ -322,17 +332,29 @@ export class TasksService {
 
     async addMember(taskId: string, memberUserId: string, userId: string) {
         await this.getTaskWithAccess(taskId, userId);
-        return this.prisma.taskMember.create({
-            data: { taskId, userId: memberUserId },
-            include: { user: true },
-        });
+        try {
+            return await this.prisma.taskMember.create({
+                data: { taskId, userId: memberUserId },
+                include: { user: true },
+            });
+        } catch (err) {
+            // If already exists, return the existing one
+            return this.prisma.taskMember.findUnique({
+                where: { taskId_userId: { taskId, userId: memberUserId } },
+                include: { user: true },
+            });
+        }
     }
 
     async removeMember(taskId: string, memberUserId: string, userId: string) {
         await this.getTaskWithAccess(taskId, userId);
-        await this.prisma.taskMember.delete({
-            where: { taskId_userId: { taskId, userId: memberUserId } },
-        });
+        try {
+            await this.prisma.taskMember.delete({
+                where: { taskId_userId: { taskId, userId: memberUserId } },
+            });
+        } catch (err) {
+            // If already gone, that's fine
+        }
         return { deleted: true };
     }
 

@@ -225,6 +225,7 @@ model Task {
   teamId      String?
   flagged     Boolean          @default(false)
   restrictTo  String?
+  coverColor  String?
   attachments TaskAttachment[]
   comments    TaskComment[]
   labels      TaskLabel[]

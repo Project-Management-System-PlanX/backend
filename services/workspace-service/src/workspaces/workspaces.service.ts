@@ -515,4 +515,76 @@ export class WorkspacesService {
 
         return { sent, received };
     }
+
+    async getMembers(workspaceId: string, userId: string) {
+        // Verify membership
+        const member = await this.prisma.workspaceMember.findUnique({
+            where: { workspaceId_userId: { workspaceId, userId } },
+        });
+        if (!member) {
+            throw new ForbiddenException('Not a member of this workspace');
+        }
+
+        return this.prisma.workspaceMember.findMany({
+            where: { workspaceId },
+            include: {
+                user: {
+                    select: {
+                        supabaseId: true,
+                        email: true,
+                        firstName: true,
+                        lastName: true,
+                        username: true,
+                        imageUrl: true,
+                    },
+                },
+            },
+            orderBy: { joinedAt: 'asc' },
+        });
+    }
+
+    async addWorkspaceMember(
+        workspaceId: string,
+        targetUserId: string,
+        requestingUserId: string,
+        role = 'MEMBER',
+    ) {
+        // Only owners/admins can add members
+        const requester = await this.prisma.workspaceMember.findUnique({
+            where: { workspaceId_userId: { workspaceId, userId: requestingUserId } },
+        });
+        if (!requester || !['OWNER', 'ADMIN'].includes(requester.role)) {
+            throw new ForbiddenException('Insufficient permissions');
+        }
+
+        return this.prisma.workspaceMember.upsert({
+            where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+            create: { workspaceId, userId: targetUserId, role },
+            update: { role },
+            include: { user: true },
+        });
+    }
+
+    async removeWorkspaceMember(
+        workspaceId: string,
+        targetUserId: string,
+        requestingUserId: string,
+    ) {
+        // Only owners/admins can remove members
+        const requester = await this.prisma.workspaceMember.findUnique({
+            where: { workspaceId_userId: { workspaceId, userId: requestingUserId } },
+        });
+        if (!requester || !['OWNER', 'ADMIN'].includes(requester.role)) {
+            throw new ForbiddenException('Insufficient permissions');
+        }
+
+        try {
+            await this.prisma.workspaceMember.delete({
+                where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+            });
+        } catch {
+            // Already removed
+        }
+        return { deleted: true };
+    }
 }
