@@ -11,14 +11,23 @@ import { PrismaService } from '../prisma/prisma.service';
 export class MembersService {
     constructor(private readonly prisma: PrismaService) {}
 
-    async addMember(workspaceId: string, userId: string, role: string = 'MEMBER') {
+    async addMember(workspaceId: string, targetUserId: string, requestingUserId: string, role: string = 'MEMBER') {
+        // Only owners/admins can add members
+        const requester = await this.prisma.workspaceMember.findUnique({
+            where: { workspaceId_userId: { workspaceId, userId: requestingUserId } },
+        });
+        if (!requester || !['OWNER', 'ADMIN'].includes(requester.role)) {
+            throw new ForbiddenException('Insufficient permissions to add members');
+        }
+
         try {
             return await this.prisma.workspaceMember.create({
                 data: {
                     workspaceId,
-                    userId,
+                    userId: targetUserId,
                     role,
                 },
+                include: { user: true },
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -28,7 +37,16 @@ export class MembersService {
         }
     }
 
-    async findByWorkspace(workspaceId: string) {
+    async findByWorkspace(workspaceId: string, requestingUserId: string) {
+        // Verify requester is a member of the workspace
+        const requester = await this.prisma.workspaceMember.findUnique({
+            where: { workspaceId_userId: { workspaceId, userId: requestingUserId } },
+        });
+
+        if (!requester) {
+            throw new ForbiddenException('Only workspace members can view the member list');
+        }
+
         return this.prisma.workspaceMember.findMany({
             where: { workspaceId },
             include: {

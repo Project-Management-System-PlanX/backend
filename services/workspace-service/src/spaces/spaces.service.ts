@@ -67,7 +67,6 @@ export class SpacesService {
                         { name: 'Today', color: '#A16207', position: 0, isDone: false },
                         { name: 'This Week', color: '#166534', position: 1, isDone: false },
                         { name: 'Later', color: '#111111', position: 2, isDone: false },
-                        { name: 'Done', color: '#0B6E4F', position: 3, isDone: true },
                     ],
                 },
             },

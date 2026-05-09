@@ -85,28 +85,4 @@ export class WorkspacesController {
         return this.workspacesService.inviteByEmail(id, userId, dto.emails, dto.channelIds);
     }
 
-    // ─── Members ───
-
-    @Get(':id/members')
-    getMembers(@Param('id') id: string, @CurrentUser('userId') userId: string) {
-        return this.workspacesService.getMembers(id, userId);
-    }
-
-    @Post(':id/members')
-    addMember(
-        @Param('id') id: string,
-        @CurrentUser('userId') userId: string,
-        @Body() body: { userId: string; role?: string },
-    ) {
-        return this.workspacesService.addWorkspaceMember(id, body.userId, userId, body.role);
-    }
-
-    @Delete(':id/members/:memberId')
-    removeMember(
-        @Param('id') id: string,
-        @Param('memberId') memberId: string,
-        @CurrentUser('userId') userId: string,
-    ) {
-        return this.workspacesService.removeWorkspaceMember(id, memberId, userId);
-    }
 }

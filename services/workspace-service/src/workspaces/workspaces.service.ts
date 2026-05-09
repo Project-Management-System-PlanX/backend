@@ -45,6 +45,23 @@ export class WorkspacesService {
             },
         });
 
+        // Create a default space for the new workspace
+        await this.prisma.space.create({
+            data: {
+                workspaceId: workspace.id,
+                name: 'My Board',
+                prefix: 'WS',
+                createdBy: ownerId,
+                statuses: {
+                    create: [
+                        { name: 'Today', color: '#A16207', position: 0, isDone: false },
+                        { name: 'This Week', color: '#166534', position: 1, isDone: false },
+                        { name: 'Later', color: '#111111', position: 2, isDone: false },
+                    ],
+                },
+            },
+        });
+
         return {
             ...workspace,
             members: [ownerMember],
