@@ -84,5 +84,4 @@ export class WorkspacesController {
     ) {
         return this.workspacesService.inviteByEmail(id, userId, dto.emails, dto.channelIds);
     }
-
 }

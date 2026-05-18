@@ -11,7 +11,12 @@ import { PrismaService } from '../prisma/prisma.service';
 export class MembersService {
     constructor(private readonly prisma: PrismaService) {}
 
-    async addMember(workspaceId: string, targetUserId: string, requestingUserId: string, role: string = 'MEMBER') {
+    async addMember(
+        workspaceId: string,
+        targetUserId: string,
+        requestingUserId: string,
+        role: string = 'MEMBER',
+    ) {
         // Only owners/admins can add members
         const requester = await this.prisma.workspaceMember.findUnique({
             where: { workspaceId_userId: { workspaceId, userId: requestingUserId } },
