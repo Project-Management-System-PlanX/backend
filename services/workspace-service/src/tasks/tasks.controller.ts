@@ -15,6 +15,11 @@ export class TasksController {
         return this.tasksService.create(createTaskDto, userId);
     }
 
+    @Post('bulk')
+    createBulk(@CurrentUser('userId') userId: string, @Body('tasks') tasks: CreateTaskDto[]) {
+        return this.tasksService.createBulk(tasks, userId);
+    }
+
     @Get('space/:spaceId')
     findBySpace(
         @Param('spaceId') spaceId: string,
@@ -27,8 +32,19 @@ export class TasksController {
     }
 
     @Get('assigned-to-me')
-    findAssignedToMe(@CurrentUser('userId') userId: string) {
-        return this.tasksService.findAssignedToMe(userId);
+    findAssignedToMe(
+        @Query('workspaceId') workspaceId: string,
+        @CurrentUser('userId') userId: string,
+    ) {
+        return this.tasksService.findAssignedToMe(userId, workspaceId);
+    }
+
+    @Get('worked-on')
+    findWorkedOn(
+        @Query('workspaceId') workspaceId: string,
+        @CurrentUser('userId') userId: string,
+    ) {
+        return this.tasksService.findWorkedOn(userId, workspaceId);
     }
 
     @Get(':id')
@@ -57,6 +73,17 @@ export class TasksController {
     @Delete(':id')
     remove(@Param('id') id: string, @CurrentUser('userId') userId: string) {
         return this.tasksService.delete(id, userId);
+    }
+
+    // AI Features
+
+    @Post(':id/assign-ai')
+    assignViaAi(
+        @Param('id') id: string,
+        @Body('workspaceId') workspaceId: string,
+        @CurrentUser('userId') userId: string,
+    ) {
+        return this.tasksService.assignViaAi(id, workspaceId, userId);
     }
 
     // Comments

@@ -244,4 +244,133 @@ export class WorkspacesService {
 
         return { workspace: invite.workspace, alreadyMember: false };
     }
+
+    async getAnalytics(workspaceId: string) {
+        const workspace = await this.prisma.workspace.findUnique({ where: { id: workspaceId } });
+        if (!workspace) throw new NotFoundException('Workspace not found');
+
+        // Get team members count
+        const teamMembers = await this.prisma.workspaceMember.count({
+            where: { workspaceId },
+        });
+
+        // Get active and completed tasks
+        const activeTasks = await this.prisma.task.count({
+            where: {
+                space: { workspaceId },
+                status: { isDone: false },
+            },
+        });
+
+        const completedTasks = await this.prisma.task.count({
+            where: {
+                space: { workspaceId },
+                status: { isDone: true },
+            },
+        });
+
+        // Get total messages
+        const totalMessages = await this.prisma.message.count({
+            where: { channel: { workspaceId } },
+        });
+
+        // Get files shared
+        const filesShared = await this.prisma.message.count({
+            where: {
+                channel: { workspaceId },
+                fileUrl: { not: null },
+            },
+        });
+
+        // Get weekly activity (last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const weeklyActivity = [];
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dayStart = new Date(date.setHours(0, 0, 0, 0));
+            const dayEnd = new Date(date.setHours(23, 59, 59, 999));
+
+            const count = await this.prisma.message.count({
+                where: {
+                    channel: { workspaceId },
+                    createdAt: {
+                        gte: dayStart,
+                        lte: dayEnd,
+                    },
+                },
+            });
+
+            weeklyActivity.push({
+                day: dayStart.toLocaleDateString('en-US', { weekday: 'short' }),
+                count,
+            });
+        }
+
+        // Get active channels
+        const activeChannels = await this.prisma.channel.findMany({
+            where: { workspaceId },
+            include: {
+                _count: { select: { messages: true } },
+            },
+            take: 10,
+        });
+
+        // Get upcoming deadlines
+        const today = new Date();
+        const upcomingDeadlines = await this.prisma.task.findMany({
+            where: {
+                space: { workspaceId },
+                dueDate: {
+                    gte: today,
+                },
+                status: { isDone: false },
+            },
+            include: {
+                space: true,
+            },
+            orderBy: { dueDate: 'asc' },
+            take: 10,
+        });
+
+        // Get recent activity
+        const recentActivity = await this.prisma.message.findMany({
+            where: { channel: { workspaceId } },
+            include: {
+                user: { select: { firstName: true, email: true } },
+                channel: { select: { name: true, type: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+        });
+
+        return {
+            teamMembers,
+            activeTasks,
+            completedTasks,
+            totalMessages,
+            filesShared,
+            weeklyActivity,
+            activeChannels: activeChannels.map((c) => ({
+                id: c.id,
+                name: c.name,
+                _count: { messages: c._count.messages },
+            })),
+            upcomingDeadlines: upcomingDeadlines.map((t) => ({
+                id: t.id,
+                title: t.title,
+                dueDate: t.dueDate?.toISOString() || null,
+                space: { prefix: t.space.prefix },
+            })),
+            recentActivity: recentActivity.map((m) => ({
+                id: m.id,
+                content: m.content,
+                createdAt: m.createdAt.toISOString(),
+                user: { firstName: m.user.firstName, email: m.user.email },
+                channel: { name: m.channel.name, type: m.channel.type },
+            })),
+        };
+    }
 }

@@ -63,6 +63,19 @@ export class TasksService {
         });
     }
 
+    async createBulk(tasks: CreateTaskDto[], userId: string) {
+        const createdTasks = [];
+        for (const dto of tasks) {
+            try {
+                const created = await this.create(dto, userId);
+                createdTasks.push(created);
+            } catch (err) {
+                console.error('Failed to create task in bulk:', err);
+            }
+        }
+        return createdTasks;
+    }
+
     async findBySpace(spaceId: string, userId: string, query: { status?: string; assignee?: string; priority?: string }) {
         await this.checkSpaceAccess(spaceId, userId);
 
@@ -87,12 +100,13 @@ export class TasksService {
         });
     }
 
-    async findAssignedToMe(userId: string) {
+    async findAssignedToMe(userId: string, workspaceId?: string) {
         // Finds tasks across all spaces where user is the assignee and is a member of the workspace
         return this.prisma.task.findMany({
             where: {
                 assigneeId: userId,
                 space: {
+                    workspaceId: workspaceId ? workspaceId : undefined,
                     workspace: {
                         members: { some: { userId } }
                     }
@@ -101,8 +115,33 @@ export class TasksService {
             include: {
                 space: { select: { name: true, prefix: true, color: true, icon: true } },
                 status: true,
+                labels: true,
             },
             orderBy: { dueDate: 'asc' },
+        });
+    }
+
+    async findWorkedOn(userId: string, workspaceId?: string) {
+        return this.prisma.task.findMany({
+            where: {
+                OR: [
+                    { assigneeId: userId },
+                    { reporterId: userId },
+                ],
+                space: {
+                    workspaceId: workspaceId ? workspaceId : undefined,
+                    workspace: {
+                        members: { some: { userId } }
+                    }
+                }
+            },
+            include: {
+                space: { select: { name: true, prefix: true, color: true, icon: true } },
+                status: true,
+                labels: true,
+            },
+            orderBy: { updatedAt: 'desc' },
+            take: 20,
         });
     }
 
@@ -212,6 +251,36 @@ export class TasksService {
         }
 
         return this.prisma.task.delete({ where: { id } });
+    }
+
+    // =========================
+    // AI Feature
+    // =========================
+
+    async assignViaAi(taskId: string, workspaceId: string, userId: string) {
+        const task = await this.prisma.task.findUnique({
+            where: { id: taskId },
+            include: { space: { include: { workspace: { include: { members: true } } } } },
+        });
+
+        if (!task || task.space.workspace.id !== workspaceId) {
+            throw new NotFoundException('Task not found in this workspace');
+        }
+
+        const members = task.space.workspace.members;
+        if (!members || members.length === 0) {
+            throw new BadRequestException('Workspace has no members to assign');
+        }
+
+        // Mock AI logic: deterministic member picking
+        const combinedText = (task.title + (task.description || '')).length;
+        const memberIndex = combinedText % members.length;
+        const selectedMember = members[memberIndex];
+
+        return this.prisma.task.update({
+            where: { id: taskId },
+            data: { assigneeId: selectedMember.userId },
+        });
     }
 
     // =========================

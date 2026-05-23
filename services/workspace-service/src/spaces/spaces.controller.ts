@@ -15,6 +15,14 @@ export class SpacesController {
         return this.spacesService.create(userId, createSpaceDto);
     }
 
+    @Post('workspace/:workspaceId/add-default-statuses')
+    addDefaultStatusesToAllSpaces(
+        @Param('workspaceId') workspaceId: string,
+        @CurrentUser('userId') userId: string,
+    ) {
+        return this.spacesService.addDefaultStatusesToAllSpaces(workspaceId, userId);
+    }
+
     @Get('workspace/:workspaceId')
     findAllByWorkspace(
         @Param('workspaceId') workspaceId: string,

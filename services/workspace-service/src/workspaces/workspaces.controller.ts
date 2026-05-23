@@ -41,6 +41,11 @@ export class WorkspacesController {
         return this.workspacesService.acceptInvite(token, userId);
     }
 
+    @Get(':id/analytics')
+    getAnalytics(@Param('id') id: string) {
+        return this.workspacesService.getAnalytics(id);
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.workspacesService.findOne(id);

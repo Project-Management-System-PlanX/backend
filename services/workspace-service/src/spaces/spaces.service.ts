@@ -57,10 +57,9 @@ export class SpacesService {
                 createdBy: userId,
                 statuses: {
                     create: [
-                        { name: 'To Do', color: '#94A3B8', position: 0, isDone: false },
-                        { name: 'In Progress', color: '#3B82F6', position: 1, isDone: false },
-                        { name: 'In Review', color: '#F59E0B', position: 2, isDone: false },
-                        { name: 'Done', color: '#0B6E4F', position: 3, isDone: true },
+                        { name: 'Today', color: '#A16207', position: 0, isDone: false },
+                        { name: 'This Week', color: '#166534', position: 1, isDone: false },
+                        { name: 'Later', color: '#111111', position: 2, isDone: false },
                     ],
                 },
             },
@@ -82,6 +81,7 @@ export class SpacesService {
         return this.prisma.space.findMany({
             where: { workspaceId },
             include: {
+                statuses: { orderBy: { position: 'asc' } },
                 _count: { select: { tasks: true } },
             },
             orderBy: { createdAt: 'desc' },
@@ -165,6 +165,15 @@ export class SpacesService {
     async createStatus(spaceId: string, createStatusDto: CreateStatusDto, userId: string) {
         await this.checkSpaceAdmin(spaceId, userId);
 
+        // Check for existing status and return it instead of throwing error
+        const existingStatus = await this.prisma.taskStatus.findUnique({
+            where: { spaceId_name: { spaceId, name: createStatusDto.name } },
+        });
+        if (existingStatus) {
+            // Return existing status instead of throwing error to handle duplicate creation attempts gracefully
+            return existingStatus;
+        }
+
         // Auto-assign position if not provided
         if (createStatusDto.position === undefined) {
             const lastStatus = await this.prisma.taskStatus.findFirst({
@@ -215,5 +224,60 @@ export class SpacesService {
         }
 
         return space;
+    }
+
+    async addDefaultStatusesToAllSpaces(workspaceId: string, userId: string) {
+        // Check if user is workspace owner or admin
+        const member = await this.prisma.workspaceMember.findUnique({
+            where: { workspaceId_userId: { workspaceId, userId } },
+        });
+
+        if (!member || !['OWNER', 'ADMIN'].includes(member.role)) {
+            throw new ForbiddenException('Only workspace owners and admins can perform this action');
+        }
+
+        const defaultStatuses = [
+            { name: 'Today', color: '#A16207', position: 0, isDone: false },
+            { name: 'This Week', color: '#166534', position: 1, isDone: false },
+            { name: 'Later', color: '#111111', position: 2, isDone: false },
+        ];
+
+        // Get all spaces in the workspace
+        const spaces = await this.prisma.space.findMany({
+            where: { workspaceId },
+            include: { statuses: true },
+        });
+
+        let updatedCount = 0;
+
+        for (const space of spaces) {
+            // Check if space already has the default statuses
+            const hasDefaultStatuses = defaultStatuses.every((defaultStatus) =>
+                space.statuses.some((s) => s.name === defaultStatus.name)
+            );
+
+            if (!hasDefaultStatuses) {
+                // Create missing default statuses
+                for (const defaultStatus of defaultStatuses) {
+                    const exists = space.statuses.some((s) => s.name === defaultStatus.name);
+                    if (!exists) {
+                        await this.prisma.taskStatus.create({
+                            data: {
+                                ...defaultStatus,
+                                spaceId: space.id,
+                            },
+                        });
+                    }
+                }
+                updatedCount++;
+            }
+        }
+
+        return {
+            success: true,
+            spacesUpdated: updatedCount,
+            totalSpaces: spaces.length,
+            message: `Added default statuses to ${updatedCount} space(s)`,
+        };
     }
 }

@@ -189,6 +189,7 @@ model Task {
   dueDate     DateTime?
   resolution  String        @default("UNRESOLVED")
   position    Int           @default(0)
+  coverColor  String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   comments    TaskComment[]

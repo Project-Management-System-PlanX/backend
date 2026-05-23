@@ -16,6 +16,10 @@ export class UpdateTaskDto extends PartialType(
 
     @IsString()
     @IsOptional()
+    coverColor?: string;
+
+    @IsString()
+    @IsOptional()
     resolution?: string; // UNRESOLVED, DONE, WONT_DO, DUPLICATE
 
     @IsArray()
