@@ -84,6 +84,7 @@ model Channel {
   workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   groups      Group[]
   messages    Message[]
+  messageReads ChannelMessageRead[]
 
   @@map("channels")
 }
@@ -132,14 +133,29 @@ model Message {
   isEdited  Boolean  @default(false) @map("is_edited")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
   fileUrl   String?  @map("file_url")
   fileName  String?  @map("file_name")
   fileType  String?  @map("file_type")
   fileSize  Int?     @map("file_size")
   channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
+  readBy    ChannelMessageRead[]
 
   @@map("messages")
+}
+
+model ChannelMessageRead {
+  id        String   @id @default(uuid())
+  channelId String   @map("channel_id")
+  userId    String   @map("user_id")
+  messageId String   @map("message_id")
+  readAt    DateTime @default(now()) @map("read_at")
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+  @@map("channel_message_reads")
 }
 
 model Space {
@@ -190,10 +206,12 @@ model Task {
   resolution  String        @default("UNRESOLVED")
   position    Int           @default(0)
   coverColor  String?
+  workType    String?       @map("work_type")
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   comments    TaskComment[]
   labels      TaskLabel[]
+  attachments TaskAttachment[]
   space       Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   status      TaskStatus    @relation(fields: [statusId], references: [id])
 
@@ -221,6 +239,20 @@ model TaskComment {
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@map("task_comments")
+}
+
+model TaskAttachment {
+  id        String   @id @default(uuid())
+  taskId    String
+  fileName  String   @map("file_name")
+  fileUrl   String   @map("file_url")
+  fileType  String?  @map("file_type")
+  fileSize  Int?     @map("file_size")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_attachments")
 }
 
 model Team {

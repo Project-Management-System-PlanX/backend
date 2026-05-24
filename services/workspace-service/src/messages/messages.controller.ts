@@ -37,4 +37,21 @@ export class MessagesController {
     ) {
         return this.messagesService.findByChannel(channelId, limit ? parseInt(limit, 10) : 50);
     }
+
+    @Get('unread-counts/:workspaceId')
+    async getUnreadCounts(
+        @Param('workspaceId') workspaceId: string,
+        @CurrentUser('userId') userId: string,
+    ) {
+        return this.messagesService.getUnreadCounts(workspaceId, userId);
+    }
+
+    @Post('mark-read/:channelId')
+    async markChannelAsRead(
+        @Param('channelId') channelId: string,
+        @CurrentUser('userId') userId: string,
+        @Body() body: { lastMessageId: string },
+    ) {
+        return this.messagesService.markChannelAsRead(channelId, userId, body.lastMessageId);
+    }
 }
