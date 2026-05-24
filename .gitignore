@@ -10,5 +10,5 @@ uploads/
 .idea/
 *.swp
 *.swo
-.prisma/
 *.tsbuildinfo
+.prisma/
