@@ -9,7 +9,7 @@ import { MessagesModule } from './messages/messages.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SpacesModule } from './spaces/spaces.module';
 import { TasksModule } from './tasks/tasks.module';
-
+import { NotificationsModule } from './notifications/notifications.module';
 import { TeamsController } from './teams/teams.controller';
 import { TeamsModule } from './teams/teams.module';
 import { TeamsService } from './teams/teams.service';
@@ -39,6 +39,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
         TeamsModule,
         TicketsModule,
         MessagesModule,
+        NotificationsModule
     ],
 })
 export class AppModule {}

@@ -480,3 +480,19 @@ model TaskMember {
   @@unique([taskId, userId])
   @@map("task_members")
 }
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  type        String   // e.g. TASK_ASSIGNED, TASK_UPDATED
+  title       String
+  body        String?
+  entityId    String?  @map("entity_id")  // taskId
+  entityType  String?  @map("entity_type") // "task"
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@map("notifications")
+}
