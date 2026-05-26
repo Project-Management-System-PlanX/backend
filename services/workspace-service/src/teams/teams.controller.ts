@@ -1,13 +1,12 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { TeamsService } from './teams.service';
-import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('teams')
 export class TeamsController {
-    constructor(private readonly teamsService: TeamsService) { }
+    constructor(private readonly teamsService: TeamsService) {}
 
     @Post()
-    create(@Body() body: { workspaceId: string, name: string, description: string }) {
+    create(@Body() body: { workspaceId: string; name: string; description: string }) {
         return this.teamsService.create(body.workspaceId, body.name, body.description);
     }
 
@@ -17,18 +16,12 @@ export class TeamsController {
     }
 
     @Post(':id/members')
-    addMember(
-        @Param('id') id: string,
-        @Body() body: { userId: string, role: string }
-    ) {
+    addMember(@Param('id') id: string, @Body() body: { userId: string; role: string }) {
         return this.teamsService.addMember(id, body.userId, body.role);
     }
 
     @Delete(':id/members/:userId')
-    removeMember(
-        @Param('id') id: string,
-        @Param('userId') userId: string
-    ) {
+    removeMember(@Param('id') id: string, @Param('userId') userId: string) {
         return this.teamsService.removeMember(id, userId);
     }
 }

@@ -26,14 +26,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         this.subscriber = createClient({ url: redisUrl });
         await this.subscriber.connect();
 
-        console.log('✅ Redis connected');
+        console.log('Redis connected');
     }
 
     async onModuleDestroy() {
         await this.client.quit();
         await this.publisher.quit();
         await this.subscriber.quit();
-        console.log('❌ Redis disconnected');
+        console.log('Redis disconnected');
     }
 
     // General Redis operations

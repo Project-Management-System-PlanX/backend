@@ -9,14 +9,18 @@ export class MembersController {
     @Post()
     addMember(
         @Param('workspaceId') workspaceId: string,
+        @CurrentUser('userId') requesterId: string,
         @Body() body: { userId: string; role?: string },
     ) {
-        return this.membersService.addMember(workspaceId, body.userId, body.role);
+        return this.membersService.addMember(workspaceId, body.userId, requesterId, body.role);
     }
 
     @Get()
-    findByWorkspace(@Param('workspaceId') workspaceId: string) {
-        return this.membersService.findByWorkspace(workspaceId);
+    findByWorkspace(
+        @Param('workspaceId') workspaceId: string,
+        @CurrentUser('userId') userId: string,
+    ) {
+        return this.membersService.findByWorkspace(workspaceId, userId);
     }
 
     @Patch(':userId')

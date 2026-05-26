@@ -12,7 +12,7 @@
     "dev:workspace": "npm run start:dev --workspace=services/workspace-service",
     "dev:meeting": "npm run start:dev --workspace=services/meeting-service",
     "dev:websocket": "npm run start:dev --workspace=services/websocket-hub",
-    "dev:all": "concurrently \"npm run dev:workspace\" \"npm run dev:meeting\" \"npm run dev:websocket\"",
+    "dev:all": "concurrently \"npm run dev:workspace\" \"npm run dev:meeting\"",
     "start:workspace": "cd services/workspace-service && node dist/main.js",
     "start:meeting": "cd services/meeting-service && node dist/main.js",
     "start:websocket": "npm run start:prod --workspace=services/websocket-hub",
@@ -29,19 +29,22 @@
     "check": "biome check --write .",
     "clean": "rm -rf node_modules services/*/node_modules services/*/dist shared/*/node_modules"
   },
-<<<<<<< HEAD
-  "devDependencies": {
-=======
   "dependencies": {
->>>>>>> migration
     "@biomejs/biome": "^2.3.15",
+    "@fastify/compress": "^8.3.1",
+    "@nestjs/platform-fastify": "^11.1.23",
     "@supabase/supabase-js": "^2.98.0",
     "@types/node": "^20.11.5",
     "concurrently": "^8.2.2",
+    "resend": "^6.12.3",
     "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "@swc/cli": "^0.5.2",
+    "@swc/core": "^1.15.18"
   }
 }

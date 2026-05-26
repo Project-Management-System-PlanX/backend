@@ -2,12 +2,13 @@ import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/commo
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
+import { InviteByEmailDto } from './dto/invite-by-email.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { WorkspacesService } from './workspaces.service';
 
 @Controller('workspaces')
 export class WorkspacesController {
-    constructor(private readonly workspacesService: WorkspacesService) { }
+    constructor(private readonly workspacesService: WorkspacesService) {}
 
     @Post()
     create(@CurrentUser('userId') userId: string, @Body() createWorkspaceDto: CreateWorkspaceDto) {
@@ -46,6 +47,11 @@ export class WorkspacesController {
         return this.workspacesService.findOne(id);
     }
 
+    @Get(':id/analytics')
+    getAnalytics(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+        return this.workspacesService.getAnalytics(id, userId);
+    }
+
     @Patch(':id')
     update(
         @Param('id') id: string,
@@ -63,5 +69,19 @@ export class WorkspacesController {
     @Post(':id/invite')
     createInvite(@Param('id') id: string, @CurrentUser('userId') userId: string) {
         return this.workspacesService.createInvite(id, userId);
+    }
+
+    @Get(':id/invitations')
+    getInvitations(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+        return this.workspacesService.getInvitations(id, userId);
+    }
+
+    @Post(':id/invite-email')
+    inviteByEmail(
+        @Param('id') id: string,
+        @CurrentUser('userId') userId: string,
+        @Body() dto: InviteByEmailDto,
+    ) {
+        return this.workspacesService.inviteByEmail(id, userId, dto.emails, dto.channelIds);
     }
 }

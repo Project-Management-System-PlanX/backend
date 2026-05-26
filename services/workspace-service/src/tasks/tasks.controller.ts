@@ -1,89 +1,147 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { TasksService } from './tasks.service';
-import { CreateTaskDto } from './dto/create-task.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { BulkCreateDto, CreateTaskDto } from './dto/create-task.dto';
+import { BulkPositionDto, MoveTaskDto } from './dto/move-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import { MoveTaskDto } from './dto/move-task.dto';
-import { CreateTaskCommentDto } from './dto/create-task-comment.dto';
+import { TasksService } from './tasks.service';
 
 @Controller('tasks')
 export class TasksController {
-    constructor(private readonly tasksService: TasksService) { }
+    constructor(private readonly tasksService: TasksService) {}
 
     @Post()
-    create(@CurrentUser('userId') userId: string, @Body() createTaskDto: CreateTaskDto) {
-        return this.tasksService.create(createTaskDto, userId);
+    create(@CurrentUser('userId') userId: string, @Body() dto: CreateTaskDto) {
+        return this.tasksService.create(userId, dto);
+    }
+
+    @Post('bulk-create')
+    bulkCreate(@CurrentUser('userId') userId: string, @Body() dto: BulkCreateDto) {
+        return this.tasksService.bulkCreate(userId, dto);
     }
 
     @Get('space/:spaceId')
-    findBySpace(
-        @Param('spaceId') spaceId: string,
-        @Query('status') status: string,
-        @Query('assignee') assignee: string,
-        @Query('priority') priority: string,
-        @CurrentUser('userId') userId: string,
-    ) {
-        return this.tasksService.findBySpace(spaceId, userId, { status, assignee, priority });
+    findAllBySpace(@CurrentUser('userId') userId: string, @Param('spaceId') spaceId: string) {
+        return this.tasksService.findAllBySpace(spaceId, userId);
     }
 
     @Get('assigned-to-me')
-    findAssignedToMe(@CurrentUser('userId') userId: string) {
-        return this.tasksService.findAssignedToMe(userId);
+    findAssignedToMe(
+        @CurrentUser('userId') userId: string,
+        @Query('workspaceId') workspaceId: string,
+    ) {
+        return this.tasksService.findAssignedToMe(userId, workspaceId);
+    }
+
+    @Get('worked-on')
+    findWorkedOn(@CurrentUser('userId') userId: string, @Query('workspaceId') workspaceId: string) {
+        return this.tasksService.findWorkedOn(userId, workspaceId);
     }
 
     @Get(':id')
-    findOne(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+    findOne(@CurrentUser('userId') userId: string, @Param('id') id: string) {
         return this.tasksService.findOne(id, userId);
     }
 
     @Patch(':id')
     update(
-        @Param('id') id: string,
-        @Body() updateTaskDto: UpdateTaskDto,
         @CurrentUser('userId') userId: string,
-    ) {
-        return this.tasksService.update(id, updateTaskDto, userId);
-    }
-
-    @Patch(':id/move')
-    moveTask(
         @Param('id') id: string,
-        @Body() moveTaskDto: MoveTaskDto,
-        @CurrentUser('userId') userId: string,
+        @Body() dto: UpdateTaskDto,
     ) {
-        return this.tasksService.moveTask(id, moveTaskDto, userId);
+        return this.tasksService.update(id, userId, dto);
     }
 
     @Delete(':id')
-    remove(@Param('id') id: string, @CurrentUser('userId') userId: string) {
-        return this.tasksService.delete(id, userId);
+    remove(@CurrentUser('userId') userId: string, @Param('id') id: string) {
+        return this.tasksService.remove(id, userId);
     }
 
-    // Comments
+    // ─── Drag-and-Drop ───
 
-    @Post(':taskId/comments')
+    @Patch(':id/move')
+    moveTask(
+        @CurrentUser('userId') userId: string,
+        @Param('id') id: string,
+        @Body() dto: MoveTaskDto,
+    ) {
+        return this.tasksService.moveTask(id, userId, dto);
+    }
+
+    @Post('bulk')
+    bulkUpdate(@CurrentUser('userId') userId: string, @Body() dto: BulkPositionDto) {
+        return this.tasksService.bulkUpdatePositions(userId, dto);
+    }
+
+    // ─── Comments ───
+
+    @Post(':id/comments')
     addComment(
-        @Param('taskId') taskId: string,
-        @Body() createCommentDto: CreateTaskCommentDto,
         @CurrentUser('userId') userId: string,
+        @Param('id') id: string,
+        @Body() dto: CreateCommentDto,
     ) {
-        return this.tasksService.createComment(taskId, createCommentDto, userId);
+        return this.tasksService.addComment(id, userId, dto);
     }
 
-    @Get(':taskId/comments')
-    getComments(
-        @Param('taskId') taskId: string,
-        @CurrentUser('userId') userId: string,
-    ) {
-        return this.tasksService.getComments(taskId, userId);
+    @Get(':id/comments')
+    getComments(@CurrentUser('userId') userId: string, @Param('id') id: string) {
+        return this.tasksService.getComments(id, userId);
     }
 
-    @Delete(':taskId/comments/:commentId')
-    removeComment(
-        @Param('taskId') taskId: string,
+    @Delete(':id/comments/:commentId')
+    deleteComment(
+        @CurrentUser('userId') userId: string,
+        @Param('id') id: string,
         @Param('commentId') commentId: string,
-        @CurrentUser('userId') userId: string,
     ) {
-        return this.tasksService.deleteComment(taskId, commentId, userId);
+        return this.tasksService.deleteComment(id, commentId, userId);
+    }
+
+    // ─── Labels ───
+
+    @Post(':id/labels')
+    addLabel(
+        @CurrentUser('userId') userId: string,
+        @Param('id') id: string,
+        @Body() body: { name: string; color: string },
+    ) {
+        return this.tasksService.addLabel(id, userId, body.name, body.color);
+    }
+
+    @Delete(':id/labels/:labelId')
+    removeLabel(
+        @CurrentUser('userId') userId: string,
+        @Param('id') id: string,
+        @Param('labelId') labelId: string,
+    ) {
+        return this.tasksService.removeLabel(id, labelId, userId);
+    }
+
+    // ─── Members ───
+
+    @Post(':id/members')
+    addMember(
+        @CurrentUser('userId') userId: string,
+        @Param('id') id: string,
+        @Body('userId') memberUserId: string,
+    ) {
+        return this.tasksService.addMember(id, memberUserId, userId);
+    }
+
+    @Delete(':id/members/:memberUserId')
+    removeMember(
+        @CurrentUser('userId') userId: string,
+        @Param('id') id: string,
+        @Param('memberUserId') memberUserId: string,
+    ) {
+        return this.tasksService.removeMember(id, memberUserId, userId);
+    }
+
+    // ─── Activities ───
+
+    @Get(':id/activities')
+    getActivities(@CurrentUser('userId') userId: string, @Param('id') id: string) {
+        return this.tasksService.getActivities(id, userId);
     }
 }

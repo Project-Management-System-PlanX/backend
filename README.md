@@ -147,15 +147,15 @@ A scalable microservices backend for TeamUp collaboration platform built with Ne
 - **Redis** (Upstash)
 - **Git**
 
-### **1. Clone & Install**
+### 🛠️ Installation & Deep Setup
+> **New to the project?** Please follow the detailed [INSTALL.md](./INSTALL.md) for a safe, error-free setup.
 
 ```bash
 # Clone repository
 git clone https://github.com/Project-Management-System-PlanX/backend.git
 cd backend
 
-# Install dependencies
-npm install
+# RECOMMENDED: Clean install for microservices
 npm run install:all
 ```
 

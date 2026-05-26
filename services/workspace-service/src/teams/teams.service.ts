@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class TeamsService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService) {}
 
     async create(workspaceId: string, name: string, description: string) {
         return this.prisma.team.create({
@@ -22,11 +22,17 @@ export class TeamsService {
                 members: {
                     include: {
                         user: {
-                            select: { id: true, email: true, firstName: true, lastName: true, imageUrl: true }
-                        }
-                    }
-                }
-            }
+                            select: {
+                                id: true,
+                                email: true,
+                                firstName: true,
+                                lastName: true,
+                                imageUrl: true,
+                            },
+                        },
+                    },
+                },
+            },
         });
     }
 
@@ -35,8 +41,8 @@ export class TeamsService {
             data: {
                 teamId,
                 userId,
-                role
-            }
+                role,
+            },
         });
     }
 
@@ -45,9 +51,9 @@ export class TeamsService {
             where: {
                 teamId_userId: {
                     teamId,
-                    userId
-                }
-            }
+                    userId,
+                },
+            },
         });
     }
 }

@@ -5,7 +5,7 @@ import {
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
-import { MeetingStatus, meetings } from '@prisma/client';
+import { MeetingStatus, meetings } from '@prisma/client-meeting';
 import { LivekitService } from '../livekit/livekit.service';
 import { PrismaService } from '../prisma/prisma.service';
 

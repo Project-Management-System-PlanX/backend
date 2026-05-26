@@ -1,21 +1,28 @@
-import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
+import {
+    ConflictException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSpaceDto } from './dto/create-space.dto';
-import { UpdateSpaceDto } from './dto/update-space.dto';
 import { CreateStatusDto } from './dto/create-status.dto';
+import { UpdateSpaceDto } from './dto/update-space.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 
 @Injectable()
 export class SpacesService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     generatePrefix(name: string): string {
-        return name
-            .split(/[\s-]+/)
-            .map((word) => word.charAt(0))
-            .join('')
-            .substring(0, 4)
-            .toUpperCase() || 'SPC';
+        return (
+            name
+                .split(/[\s-]+/)
+                .map((word) => word.charAt(0))
+                .join('')
+                .substring(0, 4)
+                .toUpperCase() || 'SPC'
+        );
     }
 
     async create(userId: string, createSpaceDto: CreateSpaceDto) {
@@ -40,7 +47,7 @@ export class SpacesService {
         });
 
         let counter = 1;
-        let basePrefix = prefix;
+        const basePrefix = prefix;
         while (collision) {
             prefix = `${basePrefix}${counter}`;
             collision = await this.prisma.space.findUnique({
@@ -57,10 +64,9 @@ export class SpacesService {
                 createdBy: userId,
                 statuses: {
                     create: [
-                        { name: 'To Do', color: '#94A3B8', position: 0, isDone: false },
-                        { name: 'In Progress', color: '#3B82F6', position: 1, isDone: false },
-                        { name: 'In Review', color: '#F59E0B', position: 2, isDone: false },
-                        { name: 'Done', color: '#0B6E4F', position: 3, isDone: true },
+                        { name: 'Today', color: '#A16207', position: 0, isDone: false },
+                        { name: 'This Week', color: '#166534', position: 1, isDone: false },
+                        { name: 'Later', color: '#111111', position: 2, isDone: false },
                     ],
                 },
             },
@@ -82,6 +88,7 @@ export class SpacesService {
         return this.prisma.space.findMany({
             where: { workspaceId },
             include: {
+                statuses: { orderBy: { position: 'asc' } },
                 _count: { select: { tasks: true } },
             },
             orderBy: { createdAt: 'desc' },
@@ -130,10 +137,17 @@ export class SpacesService {
 
         if (updateSpaceDto.prefix) {
             const existing = await this.prisma.space.findUnique({
-                where: { workspaceId_prefix: { workspaceId: space.workspaceId, prefix: updateSpaceDto.prefix } },
+                where: {
+                    workspaceId_prefix: {
+                        workspaceId: space.workspaceId,
+                        prefix: updateSpaceDto.prefix,
+                    },
+                },
             });
             if (existing && existing.id !== id) {
-                throw new ConflictException(`Prefix ${updateSpaceDto.prefix} is already used in this workspace`);
+                throw new ConflictException(
+                    `Prefix ${updateSpaceDto.prefix} is already used in this workspace`,
+                );
             }
         }
 
@@ -179,7 +193,12 @@ export class SpacesService {
         });
     }
 
-    async updateStatus(spaceId: string, statusId: string, updateStatusDto: UpdateStatusDto, userId: string) {
+    async updateStatus(
+        spaceId: string,
+        statusId: string,
+        updateStatusDto: UpdateStatusDto,
+        userId: string,
+    ) {
         await this.checkSpaceAdmin(spaceId, userId);
         return this.prisma.taskStatus.update({
             where: { id: statusId },
@@ -193,7 +212,9 @@ export class SpacesService {
         // Check if there are tasks using this status
         const tasksCount = await this.prisma.task.count({ where: { statusId } });
         if (tasksCount > 0) {
-            throw new ConflictException(`Cannot delete status with ${tasksCount} task(s). Move them first.`);
+            throw new ConflictException(
+                `Cannot delete status with ${tasksCount} task(s). Move them first.`,
+            );
         }
 
         return this.prisma.taskStatus.delete({ where: { id: statusId } });

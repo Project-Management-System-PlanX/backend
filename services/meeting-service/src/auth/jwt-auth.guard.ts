@@ -1,12 +1,17 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
-import { Request } from 'express';
+
+/** Platform-agnostic request shape (works with Express and Fastify) */
+interface HttpRequest {
+    headers: { authorization?: string; [key: string]: unknown };
+    [key: string]: unknown;
+}
 
 export interface AuthenticatedUser {
     userId: string;
     email: string;
 }
 
-export interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends HttpRequest {
     user: AuthenticatedUser;
 }
 

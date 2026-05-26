@@ -1,33 +1,68 @@
-import { IsDateString, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+    IsArray,
+    IsBoolean,
+    IsDateString,
+    IsNumber,
+    IsOptional,
+    IsString,
+    ValidateNested,
+} from 'class-validator';
 
 export class CreateTaskDto {
     @IsString()
     spaceId: string;
 
     @IsString()
+    statusId: string;
+
+    @IsString()
     title: string;
 
-    @IsString()
     @IsOptional()
+    @IsString()
     description?: string;
 
-    @IsString()
     @IsOptional()
-    priority?: string; // NONE, LOW, MEDIUM, HIGH, CRITICAL
+    @IsString()
+    priority?: string;
 
-    @IsString()
     @IsOptional()
+    @IsString()
+    workType?: string;
+
+    @IsOptional()
+    @IsString()
     assigneeId?: string;
 
-    @IsDateString()
     @IsOptional()
+    @IsDateString()
     dueDate?: string;
 
-    @IsNumber()
     @IsOptional()
+    @IsDateString()
+    startDate?: string;
+
+    @IsOptional()
+    @IsNumber()
     position?: number;
 
-    @IsString()
     @IsOptional()
-    statusId?: string;
+    @IsString()
+    parentId?: string;
+
+    @IsOptional()
+    @IsString()
+    teamId?: string;
+
+    @IsOptional()
+    @IsBoolean()
+    flagged?: boolean;
+}
+
+export class BulkCreateDto {
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => CreateTaskDto)
+    tasks: CreateTaskDto[];
 }

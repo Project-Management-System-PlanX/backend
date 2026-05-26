@@ -1,25 +1,71 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateTaskDto } from './create-task.dto';
-import { OmitType } from '@nestjs/mapped-types';
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import {
+    IsBoolean,
+    IsDateString,
+    IsNumber,
+    IsOptional,
+    IsString,
+    ValidateIf,
+} from 'class-validator';
 
-export class UpdateTaskDto extends PartialType(
-    OmitType(CreateTaskDto, ['spaceId'] as const)
-) {
+export class UpdateTaskDto {
+    @IsOptional()
+    @IsString()
     title?: string;
+
+    @IsOptional()
+    @IsString()
     description?: string;
-    priority?: string;
-    assigneeId?: string;
-    dueDate?: string;
-    position?: number;
+
+    @IsOptional()
+    @IsString()
     statusId?: string;
 
+    @IsOptional()
     @IsString()
-    @IsOptional()
-    resolution?: string; // UNRESOLVED, DONE, WONT_DO, DUPLICATE
+    priority?: string;
 
-    @IsArray()
-    @IsString({ each: true })
     @IsOptional()
-    labels?: string[]; // Simplified: pass an array of tag strings
+    @IsString()
+    workType?: string;
+
+    @IsOptional()
+    @ValidateIf((_obj, value) => value !== null)
+    @IsString()
+    assigneeId?: string | null;
+
+    @IsOptional()
+    @IsDateString()
+    dueDate?: string;
+
+    @IsOptional()
+    @IsDateString()
+    startDate?: string;
+
+    @IsOptional()
+    @IsString()
+    resolution?: string;
+
+    @IsOptional()
+    @IsNumber()
+    position?: number;
+
+    @IsOptional()
+    @IsString()
+    parentId?: string;
+
+    @IsOptional()
+    @IsString()
+    teamId?: string;
+
+    @IsOptional()
+    @IsBoolean()
+    flagged?: boolean;
+
+    @IsOptional()
+    @IsString()
+    restrictTo?: string;
+
+    @IsOptional()
+    @IsString()
+    coverColor?: string;
 }

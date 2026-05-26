@@ -10,7 +10,7 @@ import { CreateChannelDto } from './dto/create-channel.dto';
 
 @Injectable()
 export class ChannelsService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async create(createChannelDto: CreateChannelDto, createdByUserId: string) {
         // Verify the user is a member of the workspace
@@ -51,9 +51,7 @@ export class ChannelsService {
 
             if (existingDM) {
                 // Return the existing DM channel; but ensure the creator is a member
-                const isMember = existingDM.members.some(
-                    (m) => m.userId === createdByUserId,
-                );
+                const isMember = existingDM.members.some((m) => m.userId === createdByUserId);
                 if (!isMember) {
                     await this.prisma.channelMember.create({
                         data: { channelId: existingDM.id, userId: createdByUserId, role: 'ADMIN' },
@@ -83,7 +81,7 @@ export class ChannelsService {
                     { type: 'PUBLIC' },
                     { type: 'COMPANY-WIDE' },
                     { type: 'PRIVATE', members: { some: { userId } } },
-                    { type: 'DIRECT_MESSAGE', members: { some: { userId } } }
+                    { type: 'DIRECT_MESSAGE', members: { some: { userId } } },
                 ],
             },
             include: {
@@ -153,6 +151,21 @@ export class ChannelsService {
             where: {
                 channelId,
                 userId,
+            },
+        });
+    }
+
+    async toggleStar(channelId: string, userId: string, isStarred: boolean) {
+        return this.prisma.channelMember.upsert({
+            where: {
+                channelId_userId: { channelId, userId },
+            },
+            update: { isStarred },
+            create: {
+                channelId,
+                userId,
+                role: 'MEMBER',
+                isStarred,
             },
         });
     }
