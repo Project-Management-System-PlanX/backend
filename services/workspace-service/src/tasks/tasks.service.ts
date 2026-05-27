@@ -256,6 +256,7 @@ export class TasksService {
     // ─── Assigned / Worked-on ───
 
     async findAssignedToMe(userId: string, workspaceId: string) {
+        if (!workspaceId) return [];
         return this.prisma.task.findMany({
             where: { assigneeId: userId, space: { workspaceId } },
             include: TASK_INCLUDE,
@@ -264,6 +265,7 @@ export class TasksService {
     }
 
     async findWorkedOn(userId: string, workspaceId: string) {
+        if (!workspaceId) return [];
         return this.prisma.task.findMany({
             where: {
                 space: { workspaceId },
