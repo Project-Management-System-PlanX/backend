@@ -8,7 +8,7 @@ import { WorkspacesService } from './workspaces.service';
 
 @Controller('workspaces')
 export class WorkspacesController {
-    constructor(private readonly workspacesService: WorkspacesService) {}
+    constructor(private readonly workspacesService: WorkspacesService) { }
 
     @Post()
     create(@CurrentUser('userId') userId: string, @Body() createWorkspaceDto: CreateWorkspaceDto) {
@@ -67,8 +67,12 @@ export class WorkspacesController {
     }
 
     @Post(':id/invite')
-    createInvite(@Param('id') id: string, @CurrentUser('userId') userId: string) {
-        return this.workspacesService.createInvite(id, userId);
+    createInvite(
+        @Param('id') id: string,
+        @CurrentUser('userId') userId: string,
+        @Body() body: { spaceId?: string },
+    ) {
+        return this.workspacesService.createInvite(id, userId, body.spaceId);
     }
 
     @Get(':id/invitations')
@@ -82,6 +86,12 @@ export class WorkspacesController {
         @CurrentUser('userId') userId: string,
         @Body() dto: InviteByEmailDto,
     ) {
-        return this.workspacesService.inviteByEmail(id, userId, dto.emails, dto.channelIds);
+        return this.workspacesService.inviteByEmail(
+            id,
+            userId,
+            dto.emails,
+            dto.channelIds,
+            dto.spaceId,
+        );
     }
 }

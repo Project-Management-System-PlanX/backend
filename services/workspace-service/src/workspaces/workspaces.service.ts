@@ -17,7 +17,7 @@ export class WorkspacesService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly emailService: EmailService,
-    ) {}
+    ) { }
 
     async create(createWorkspaceDto: CreateWorkspaceDto, ownerId: string) {
         // Check if slug already exists
@@ -313,7 +313,7 @@ export class WorkspacesService {
         return this.prisma.workspace.delete({ where: { id } });
     }
 
-    async createInvite(workspaceId: string, userId: string) {
+    async createInvite(workspaceId: string, userId: string, spaceId?: string) {
         // Verify user is OWNER or ADMIN
         const member = await this.prisma.workspaceMember.findUnique({
             where: { workspaceId_userId: { workspaceId, userId } },
@@ -326,6 +326,7 @@ export class WorkspacesService {
             data: {
                 workspaceId: workspaceId,
                 createdBy: userId,
+                spaceId: spaceId,
             },
         });
 
@@ -361,7 +362,7 @@ export class WorkspacesService {
         });
 
         if (existingMember) {
-            return { workspace: invite.workspace, alreadyMember: true };
+            return { workspace: invite.workspace, alreadyMember: true, spaceId: invite.spaceId };
         }
 
         // Add as member
@@ -395,7 +396,7 @@ export class WorkspacesService {
             });
         }
 
-        return { workspace: invite.workspace, alreadyMember: false };
+        return { workspace: invite.workspace, alreadyMember: false, spaceId: invite.spaceId };
     }
 
     async inviteByEmail(
@@ -403,6 +404,7 @@ export class WorkspacesService {
         userId: string,
         emails: string[],
         channelIds?: string[],
+        spaceId?: string,
     ) {
         // Verify user is OWNER or ADMIN
         const member = await this.prisma.workspaceMember.findUnique({
@@ -437,6 +439,7 @@ export class WorkspacesService {
             data: {
                 workspaceId,
                 createdBy: userId,
+                spaceId,
             },
         });
 
@@ -455,6 +458,7 @@ export class WorkspacesService {
                 inviteToken: invite.token,
                 status: 'PENDING',
                 channelIds: validChannelIds || [],
+                spaceId,
             })),
         });
 
@@ -524,10 +528,10 @@ export class WorkspacesService {
         // Invitations RECEIVED by this user's email
         const received = user?.email
             ? await this.prisma.emailInvitation.findMany({
-                  where: { email: user.email.toLowerCase(), workspaceId },
-                  orderBy: { sentAt: 'desc' },
-                  include: { workspace: { select: { name: true, slug: true } } },
-              })
+                where: { email: user.email.toLowerCase(), workspaceId },
+                orderBy: { sentAt: 'desc' },
+                include: { workspace: { select: { name: true, slug: true } } },
+            })
             : [];
 
         return { sent, received };

@@ -10,4 +10,8 @@ export class InviteByEmailDto {
     @IsArray()
     @IsString({ each: true })
     channelIds?: string[];
+
+    @IsOptional()
+    @IsString()
+    spaceId?: string;
 }

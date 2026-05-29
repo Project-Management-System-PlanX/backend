@@ -9,19 +9,19 @@ datasource db {
 }
 
 model User {
-  id               String            @id @default(uuid())
-  email            String            @unique
+  id               String             @id @default(uuid())
+  email            String             @unique
   firstName        String?
   lastName         String?
   username         String?
   imageUrl         String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  supabaseId       String            @unique
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  supabaseId       String             @unique
   messages         Message[]
   teamMembers      TeamMember[]
-  assignedTickets  Ticket[]          @relation("TicketAssignee")
-  createdTickets   Ticket[]          @relation("TicketCreator")
+  assignedTickets  Ticket[]           @relation("TicketAssignee")
+  createdTickets   Ticket[]           @relation("TicketCreator")
   workspaceMembers WorkspaceMember[]
   readStates       MessageReadState[]
   taskMembers      TaskMember[]
@@ -52,6 +52,7 @@ model Workspace {
 model WorkspaceInvite {
   id          String    @id @default(dbgenerated("(gen_random_uuid())::text"))
   workspaceId String    @map("workspace_id")
+  spaceId     String?   @map("space_id")
   token       String    @unique @default(dbgenerated("(gen_random_uuid())::text"))
   createdBy   String    @map("created_by")
   expiresAt   DateTime  @default(dbgenerated("(now() + '7 days'::interval)")) @map("expires_at") @db.Timestamp(6)
@@ -66,6 +67,7 @@ model WorkspaceInvite {
 model EmailInvitation {
   id          String    @id @default(dbgenerated("(gen_random_uuid())::text"))
   workspaceId String    @map("workspace_id")
+  spaceId     String?   @map("space_id")
   email       String
   invitedBy   String    @map("invited_by")
   inviteToken String    @map("invite_token")
@@ -92,15 +94,15 @@ model WorkspaceMember {
 }
 
 model Channel {
-  id          String          @id @default(uuid())
+  id          String             @id @default(uuid())
   workspaceId String
   name        String
-  type        String          @default("PUBLIC")
+  type        String             @default("PUBLIC")
   description String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
   members     ChannelMember[]
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   groups      Group[]
   messages    Message[]
   readStates  MessageReadState[]
@@ -390,8 +392,8 @@ model MessageReadState {
   lastReadMessageId String?  @map("last_read_message_id")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
-  channel           Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  user              User     @relation(fields: [userId], references: [supabaseId])
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [supabaseId])
 
   @@unique([channelId, userId])
   @@index([userId])
@@ -401,13 +403,13 @@ model MessageReadState {
 // ─── Boards (Kanban view persistence) ───
 
 model Board {
-  id          String        @id @default(uuid())
-  spaceId     String
-  name        String        @default("Board")
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  space       Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  columns     BoardColumn[]
+  id        String        @id @default(uuid())
+  spaceId   String
+  name      String        @default("Board")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  space     Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  columns   BoardColumn[]
 
   @@map("boards")
 }
@@ -453,16 +455,16 @@ model ChecklistItem {
 // ─── Activity Log ───
 
 model ActivityLog {
-  id         String   @id @default(uuid())
-  taskId     String
-  userId     String
-  action     String
-  field      String?
-  oldValue   String?
-  newValue   String?
-  metadata   Json?
-  createdAt  DateTime @default(now())
-  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  action    String
+  field     String?
+  oldValue  String?
+  newValue  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
   @@index([userId])
@@ -470,27 +472,27 @@ model ActivityLog {
 }
 
 model TaskMember {
-  id        String   @id @default(uuid())
-  taskId    String
-  userId    String
-  joinedAt  DateTime @default(now())
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
+  id       String   @id @default(uuid())
+  taskId   String
+  userId   String
+  joinedAt DateTime @default(now())
+  task     Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
 
   @@unique([taskId, userId])
   @@map("task_members")
 }
 
 model Notification {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  type        String   // e.g. TASK_ASSIGNED, TASK_UPDATED
-  title       String
-  body        String?
-  entityId    String?  @map("entity_id")  // taskId
-  entityType  String?  @map("entity_type") // "task"
-  isRead      Boolean  @default(false) @map("is_read")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  type       String // e.g. TASK_ASSIGNED, TASK_UPDATED
+  title      String
+  body       String?
+  entityId   String?  @map("entity_id") // taskId
+  entityType String?  @map("entity_type") // "task"
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([userId])
   @@index([userId, isRead])
